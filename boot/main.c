@@ -10,6 +10,9 @@
 #define SECTSIZE	512
 #define ELFHDR		((Elf32_Ehdr *) 0x10000)	// Extended memory
 
+static void readseg(uint32_t pa, uint32_t count, uint32_t offset);
+static void readsect(void *dst, uint32_t offset);
+
 void
 bootmain()
 {
@@ -44,7 +47,7 @@ bad:
 /* 
  * Read 'count' bytes at 'offset' from kernel into physical address 'pa'
  */
-void
+static void
 readseg(uint32_t pa, uint32_t count, uint32_t offset)
 {
 	uint32_t end_pa = pa + count;
@@ -66,7 +69,7 @@ readseg(uint32_t pa, uint32_t count, uint32_t offset)
 
 /* IDE hard disk driver using PIO (Programmed I/O) */
 
-void
+static void
 waitdisk()
 {
 	// wait for disk ready
@@ -74,7 +77,7 @@ waitdisk()
 		/* do nothing */;
 }
 
-void
+static void
 readsect(void *dst, uint32_t offset)
 {
 	// wait for disk to be ready
