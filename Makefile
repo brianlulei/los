@@ -1,3 +1,5 @@
+OBJDIR := obj
+
 include boot/Makefile
 
-all: boot/main.o boot/boot.o
+all: $(OBJDIR)/boot/main.o $(OBJDIR)/boot/boot.o
