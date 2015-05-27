@@ -77,6 +77,3 @@ gdt:
 gdtdesc:
 	.word .-gdt-1			# sizeof(gdt) -1
 	.long gdt				# address of gdt
-
-.org    0x1fe,  0x90
-.word   0xaa55

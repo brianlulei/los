@@ -1,5 +1,7 @@
 OBJDIR := obj
+OBJDUMP := objdump
+OBJCOPY := objcopy
 
 include boot/Makefile
 
-all: $(OBJDIR)/boot/main.o $(OBJDIR)/boot/boot.o
+all: $(OBJDIR)/boot/boot
