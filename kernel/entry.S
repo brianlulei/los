@@ -13,7 +13,7 @@
 # address = 0x100000. We need to make the virtual address of '_start' symbol
 # = it's *physical* address. But for other global symbols, we want to use the
 # virtual addresses (> 0xF0000000). This is the trick to handle this.
-
+.code32
 .globl	_start
 _start = RELOC(entry)
 
