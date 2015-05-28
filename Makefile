@@ -2,6 +2,7 @@ OBJDIR := obj
 OBJDUMP := objdump
 OBJCOPY := objcopy
 
-include boot/Makefile
+all: $(OBJDIR)/boot/boot $(OBJDIR)/kernel/entry.o
 
-all: $(OBJDIR)/boot/boot
+include boot/Makefile
+include kernel/Makefile
