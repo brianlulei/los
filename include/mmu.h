@@ -5,8 +5,15 @@
  * Part 1. Paging data structures and constants.
  *
  */
+
 #define PGSIZE		4096	// bytes mapped by a page
 #define PGSHIFT		12		// log2(PGSIZE)
+
+#define PTXSHIFT	12		// offset of PTX in a linear address
+#define PDXSHIFT	22		// offset of PDX in a linear address
+
+#define NPDENTRIES	1024	// page directory entries per page directory
+#define NPTENTRIES	1024	// page table entries per page table
 
 /*
  *	Macros to build GDT entries in assembly.
@@ -21,6 +28,16 @@
 	.byte (((base) >> 16) & 0xff), (0x90 | (type)),		\
 		  (0xC0 | (((lim) >> 28) & 0x0f)), (((base) >> 24) & 0xff)
 
+// Page table/directory entry flags
+#define PTE_P	0x001		// Present
+#define PTE_W	0x002		// Writeable
+#define PTE_U	0x004		// User
+#define PTE_PWT	0x008		// Write-Through
+#define PTE_PCD	0x010		// Cache-Disable
+#define PTE_A	0x020		// Accessed
+#define PTE_D	0x040		// Dirty
+#define PTE_PS	0x080		// Page Size
+#define PTR_G	0x100		// Global
 
 // Descriptor Type Bits
 #define STA_X	0x08		// Executable (code) segment 
