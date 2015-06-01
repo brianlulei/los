@@ -13,4 +13,10 @@ $(OBJDIR)/kernel/%.o: kernel/%.S
 $(OBJDIR)/kernel/%.o: kernel/%.c
 	@echo + cc $<
 	@mkdir -p $(@D)
-	$(CC) -I. -c -o $@ $<
+	$(CC) -nostdinc -fno-builtin -I. -c -o $@ $<
+
+$(OBJDIR)/kernel/%.o: lib/%.c
+	@echo + cc $<
+	@mkdir -p $(@D)
+	$(CC) -nostdinc -fno-builtin -I. -c -o $@ $<
+
