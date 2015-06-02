@@ -6,6 +6,7 @@ static uint32_t addr_6845;
 static uint16_t	* crt_buf;
 static uint16_t	crt_pos;
 
+static void cons_putc(uint16_t c);
 
 /* Text-mode CGA/VGA display output */
 
@@ -61,10 +62,71 @@ cga_init(void)
 	crt_pos = pos;
 }
 
+static void
+cga_putc(uint16_t c)
+{
+	//
+	if (!(c & ~0xFF))
+		c |= 0x0700;
+
+	switch (c & 0xFF) {
+		case '\b':
+			if (crt_pos > 0) {
+				crt_pos --;
+				crt_buf[crt_pos] = (c & ~0xFF) | ' ';
+			}
+			break;
+		case '\n':
+			crt_pos += CRT_COLS;
+			/* fall through */
+		case '\r':
+			crt_pos -= (crt_pos % CRT_COLS);
+			break;
+		case '\t':
+			cons_putc(' ');
+			cons_putc(' ');
+			cons_putc(' ');
+			cons_putc(' ');
+			break;
+		default:
+			crt_buf[crt_pos++] = c;
+			break;
+	}
+
+	// move up by 1 line
+	if (crt_pos >= CRT_SIZE) {
+		int i;
+
+		memmove(crt_buf, crt_buf + CRT_COLS, (CRT_SIZE - CRT_COLS) * sizeof(uint16_t));
+		for (i = CRT_SIZE - CRT_COLS; i < CRT_SIZE; i++) {
+			crt_buf[i] = 0x0700 | ' ';
+		}
+		crt_pos -= CRT_COLS;
+	}
+	/* move the cursor*/
+	outb(addr_6845, 0x0E);
+	outb(addr_6845 + 1, crt_pos >> 8);
+	outb(addr_6845, 0x0F);
+	outb(addr_6845 + 1, crt_pos);
+}
+
 
 // initialize the console devices
 void
 cons_init(void)
 {
 	cga_init();
+}
+
+/* Implement functions defined in stdio.h */
+static void
+cons_putc(uint16_t c)
+{
+	cga_putc(c);
+}
+
+void
+cputchar(int c)
+{
+	cons_putc(c);
 }

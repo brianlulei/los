@@ -6,7 +6,9 @@
 #ifndef NULL
 #define NULL	((void *) 0)
 #endif
-
+/* kernel/console.c */
+void	cputchar(int c);
+int		getchar(void);
 
 /* kernel/printf.c */
 int		cprintf(const char *fmt, ...);
