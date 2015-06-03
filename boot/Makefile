@@ -3,12 +3,12 @@ BOOT_OBJS = $(OBJDIR)/boot/boot.o $(OBJDIR)/boot/main.o
 $(OBJDIR)/boot/%.o: boot/%.S
 	@echo + as $<
 	@mkdir -p $(@D)
-	$(CC) -I. -nostdinc -Os -c -o $@ $<
+	$(CC) -I. -nostdinc $(KERN_CFLAGS) -Os -c -o $@ $<
 
 $(OBJDIR)/boot/%.o: boot/%.c
 	@echo + cc -Os $<
 	@mkdir -p $(@D)
-	$(CC) -I. -nostdinc -Os -c -o $@ $<
+	$(CC) -I. -nostdinc $(KERN_CFLAGS) -Os -c -o $@ $<
 
 $(OBJDIR)/boot/sign: boot/sign.c
 	@echo + cc $<
