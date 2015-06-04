@@ -26,13 +26,24 @@ GCC_LIB	:= $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 OBJDIRS	:=
 
 # Make sure that all is the first target
+all: 
+
+# Eliminate default suffix rules
+.SUFFIXES:
+
+.DELETE_ON_ERROR:
+
+# make it so that no intermediate .o files are ever deleted
+.PRECIOUS: $(OBJDIR)/kernel/%.o
+
 KERN_CFLAGS	:= $(CFLAGS) -DLOS_KERNEL -gstabs
 USER_CFLAGS	:= $(CFLAGS) -DLOS_USER -gstabs
-
-all: $(OBJDIR)/boot/boot $(OBJDIR)/kernel/entry.o $(OBJDIR)/kernel/entrypgdir.o $(OBJDIR)/kernel/console.o $(OBJDIR)/kernel/init.o $(OBJDIR)/kernel/console.o $(OBJDIR)/kernel/printf.o $(OBJDIR)/kernel/printfmt.o $(OBJDIR)/kernel/string.o
 
 include boot/Makefile
 include kernel/Makefile
 
 clean:
 	rm -rf obj
+
+
+.PHONY: all clean
