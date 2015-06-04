@@ -1,22 +1,47 @@
-OBJDIRS += kern
+OBJDIRS	+= kernel
 
-KERN_SRCFILES := kernel/entry.S
+KERN_LDFLAGS	:= $(LDFLAGS) -nostdlib
 
-KERN_SRCFILES := $(wildcard $(KERN_SRCFILES))
+KERN_SRCFILES := kernel/entry.S \
+				 kernel/entrypgdir.c \
+				 kernel/init.c \
+				 kernel/console.c \
+				 kernel/printf.c \
+				 lib/printfmt.c \
+				 lib/string.c
+
+# Only build files if they exist.
+# KERN_SRCFILES	:= $(wildcard $(KERN_SRCFILES))
+
+KERN_OBJFILES	:= $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
+KERN_OBJFILES	:= $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))
+KERN_OBJFILES	:= $(patsubst $(OBJDIR)/lib/%, $(OBJDIR)/kernel/%, $(KERN_OBJFILES))
 
 $(OBJDIR)/kernel/%.o: kernel/%.S
 	@echo + cc $<
 	@mkdir -p $(@D)
-	#$(CC) -I. -c -o $@ $<
-	$(CC) -pipe -nostdinc -O1 -fno-builtin -I. -MD -fno-omit-frame-pointer -Wall -Wno-format -Wno-unused -Werror -gstabs -m32 -fno-tree-ch -fno-stack-protector -gstabs -c -o $@ $<
+	$(CC) -nostdinc $(KERN_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/kernel/%.o: kernel/%.c
 	@echo + cc $<
 	@mkdir -p $(@D)
-	$(CC) -nostdinc -fno-builtin -I. -c -o $@ $<
+	$(CC) -nostdinc $(KERN_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/kernel/%.o: lib/%.c
 	@echo + cc $<
 	@mkdir -p $(@D)
-	$(CC) -nostdinc -fno-builtin -I. -c -o $@ $<
+	$(CC) -nostdinc $(KERN_CFLAGS) -c -o $@ $<
 
+# How to build the kernel itself
+$(OBJDIR)/kernel/kernel: $(KERN_OBJFILES) 
+	@echo + ld $@ $<
+
+# How to build the kenel disk image
+$(OBJDIR)/kernel/kernel.img: $(OBJDIR)/kernel/kernel $(OBJDIR)/boot/boot
+	@echo + make $@
+	dd if=/dev/zero of=/$(OBJDIR)/kernel/kernel.img~ count=10000 2>/dev/null
+	dd if=$(OBJDIR)/boot/boot of=$(OBJDIR)/kernel/kernel.img~ conv=notruc 2>/dev/null
+	dd if=$(OBJDIR)/kernel/kernel of=$(OBJDIR)/kernel/kernel.img~ seek=1 conv=notruc 2>/dev/null
+	mv $(OBJDIR)/kernel/kernel.img~ $(OBJDIR)/kernel/kernel.img
+
+all: $(OBJDIR)/kernel/kernel.img

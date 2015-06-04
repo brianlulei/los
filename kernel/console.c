@@ -1,6 +1,7 @@
 #include <kernel/console.h>
 #include <include/memlayout.h>
-
+#include <include/x86.h>
+#include <include/string.h>
 
 static uint32_t addr_6845;
 static uint16_t	* crt_buf;

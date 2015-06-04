@@ -41,6 +41,11 @@ USER_CFLAGS	:= $(CFLAGS) -DLOS_USER -gstabs
 
 include boot/Makefile
 include kernel/Makefile
+include $(OBJDIR)/.deps
+
+
+$(OBJDIR)/.deps: $(foreach dir, $(OBJDIRS), $(wildcard $(OBJDIR)/$(dir)/*.d))
+	@mkdir -p $(@D)
 
 clean:
 	rm -rf obj
