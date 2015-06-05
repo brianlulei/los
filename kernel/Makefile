@@ -1,6 +1,6 @@
 OBJDIRS	+= kernel
 
-KERN_LDFLAGS	:= $(LDFLAGS) -nostdlib
+KERN_LDFLAGS	:= $(LDFLAGS) -nostdlib -T kernel/kernel.ld
 
 KERN_SRCFILES := kernel/entry.S \
 				 kernel/entrypgdir.c \
@@ -35,13 +35,14 @@ $(OBJDIR)/kernel/%.o: lib/%.c
 # How to build the kernel itself
 $(OBJDIR)/kernel/kernel: $(KERN_OBJFILES) 
 	@echo + ld $@ $<
+	$(LD) -o $@ $(KERN_LDFLAGS) $(GCC_LIB) -b binary $(KERN_BINFILES)
 
 # How to build the kenel disk image
 $(OBJDIR)/kernel/kernel.img: $(OBJDIR)/kernel/kernel $(OBJDIR)/boot/boot
 	@echo + make $@
-	dd if=/dev/zero of=/$(OBJDIR)/kernel/kernel.img~ count=10000 2>/dev/null
-	dd if=$(OBJDIR)/boot/boot of=$(OBJDIR)/kernel/kernel.img~ conv=notruc 2>/dev/null
-	dd if=$(OBJDIR)/kernel/kernel of=$(OBJDIR)/kernel/kernel.img~ seek=1 conv=notruc 2>/dev/null
+	dd if=/dev/zero of=$(OBJDIR)/kernel/kernel.img~ count=10000 2>/dev/null
+	dd if=$(OBJDIR)/boot/boot of=$(OBJDIR)/kernel/kernel.img~ conv=notrunc 2>/dev/null
+	dd if=$(OBJDIR)/kernel/kernel of=$(OBJDIR)/kernel/kernel.img~ seek=1 conv=notrunc 2>/dev/null
 	mv $(OBJDIR)/kernel/kernel.img~ $(OBJDIR)/kernel/kernel.img
 
 all: $(OBJDIR)/kernel/kernel.img
