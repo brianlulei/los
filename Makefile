@@ -41,9 +41,29 @@ USER_CFLAGS	:= $(CFLAGS) -DLOS_USER -gstabs
 
 include boot/Makefile
 include kernel/Makefile
+
+ifndef QEMU
+QEMU	:= $(shell if which qemu > /dev/null; \
+				   then echo qemu; exit; \
+						elif which qemu-system-i386 > /dev/null; \
+						then echo qemu-system-i386; exit; \
+				   fi;)
+endif
+
+IMAGES	:= $(OBJDIR)/kernel/kernel.img
+GDBPORT := $(shell expr `id -u` % 5000 + 25000)
+QEMUOPTS:= -hda $(OBJDIR)/kernel/kernel.img -gdb tcp::$(GDBPORT)
+
+qemu: $(IMAGES)
+	$(QEMU) $(QEMUOPTS)
+
+qemu-gdb: $(IMAGES)
+	@echo "***"
+	@echo "*** Use Ctrl-a x to exit qemu"
+	@echo "***"
+	$(QEMU) $(QEMUOPTS) -S
+
 include $(OBJDIR)/.deps
-
-
 $(OBJDIR)/.deps: $(foreach dir, $(OBJDIRS), $(wildcard $(OBJDIR)/$(dir)/*.d))
 	@mkdir -p $(@D)
 
