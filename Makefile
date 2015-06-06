@@ -54,10 +54,15 @@ IMAGES	:= $(OBJDIR)/kernel/kernel.img
 GDBPORT := $(shell expr `id -u` % 5000 + 25000)
 QEMUOPTS:= -hda $(OBJDIR)/kernel/kernel.img -gdb tcp::$(GDBPORT)
 
+pre-qemu: .gdbinit
+
+.gdbinit: .gdbinit.template
+	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
+
 qemu: $(IMAGES)
 	$(QEMU) $(QEMUOPTS)
 
-qemu-gdb: $(IMAGES)
+qemu-gdb: $(IMAGES) pre-qemu
 	@echo "***"
 	@echo "*** Use Ctrl-a x to exit qemu"
 	@echo "***"
@@ -69,6 +74,5 @@ $(OBJDIR)/.deps: $(foreach dir, $(OBJDIRS), $(wildcard $(OBJDIR)/$(dir)/*.d))
 
 clean:
 	rm -rf obj
-
 
 .PHONY: all clean
