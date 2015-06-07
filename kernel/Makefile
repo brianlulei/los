@@ -35,7 +35,9 @@ $(OBJDIR)/kernel/%.o: lib/%.c
 # How to build the kernel itself
 $(OBJDIR)/kernel/kernel: $(KERN_OBJFILES) 
 	@echo + ld $@ $<
-	$(LD) -o $@ $(KERN_LDFLAGS) $(GCC_LIB) -b binary $(KERN_BINFILES)
+	$(LD) -o $@ $(KERN_LDFLAGS) $(KERN_OBJFILES) $(GCC_LIB) -b binary $(KERN_BINFILES)
+	$(OBJDUMP) -S $@ > $@.asm
+	$(NM) -n $@ > $@.sym
 
 # How to build the kenel disk image
 $(OBJDIR)/kernel/kernel.img: $(OBJDIR)/kernel/kernel $(OBJDIR)/boot/boot

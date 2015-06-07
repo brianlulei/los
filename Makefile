@@ -17,6 +17,8 @@ CFLAGS	:= $(CFLAGS) -O1 -fno-builtin -I$(TOP) -MD
 CFLAGS	+= -fno-omit-frame-pointer
 CFLAGS	+= -Wall -Wno-format -Wno-unused -Werror -gstabs -m32
 CFLAGS	+= -fno-tree-ch
+CFLAGS	+= $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+
 
 LDFLAGS	:= -m elf_i386
 
