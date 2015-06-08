@@ -25,8 +25,11 @@ pde_t entry_pgdir[NPDENTRIES] = {
      */
 
 	// Map VA's [0, 4MB) to PA's [0, 4MB)
-	[0] =					(((uintptr_t)entry_pgtable - KERNBASE) && ~0x0FFF) | PTE_P,
-	[KERNBASE>>PDXSHIFT] =  (((uintptr_t)entry_pgtable - KERNBASE) && ~0x0FFF) | PTE_P | PTE_W
+	// & and | are not valid constant expression operator. 
+	// [0] =					(((uintptr_t)entry_pgtable - KERNBASE) & ~0x0FFF) | PTE_P,
+	// [KERNBASE>>PDXSHIFT] =  (((uintptr_t)entry_pgtable - KERNBASE) & ~0x0FFF) | PTE_P | PTE_W
+	[0] =					((uintptr_t)entry_pgtable - KERNBASE) + PTE_P,
+	[KERNBASE>>PDXSHIFT] =  ((uintptr_t)entry_pgtable - KERNBASE) + PTE_P + PTE_W
 };
 
 /* Entry 0 of the page table maps to physical page 0 
