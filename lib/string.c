@@ -1,5 +1,13 @@
 #include <include/string.h>
 
+int strnlen(const char *s, size_t size)
+{
+	int n;
+	for (n = 0; size > 0 && *s != '\0'; s++, size--)
+		n++;
+	return n;
+}
+
 void *
 memset(void *dst, int c, size_t n)
 {
