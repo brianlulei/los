@@ -2,6 +2,19 @@
 #include <include/string.h>
 
 #include <kernel/console.h>
+#include <kernel/monitor.h>
+
+// Test the stack backtrace function
+void
+test_backtrace(int x)
+{
+	cprintf("entering test_backtrace %d\n", x);
+	if (x > 0)
+		test_backtrace(x - 1);
+	else
+		mon_backtrace(0, 0, 0);
+	cprintf("leaving test_backtrace %d\n", x);
+}
 
 void
 i386_init(void)
@@ -16,4 +29,5 @@ i386_init(void)
 	// Initialize the console.
 	cons_init();
 	cprintf("Finally we see something from screen!");
+	test_backtrace(5);
 }

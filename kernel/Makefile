@@ -7,6 +7,7 @@ KERN_SRCFILES := kernel/entry.S \
 				 kernel/init.c \
 				 kernel/console.c \
 				 kernel/printf.c \
+				 kernel/monitor.c \
 				 lib/printfmt.c \
 				 lib/string.c
 
