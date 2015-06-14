@@ -38,3 +38,17 @@ memmove(void *dst, const void *src, size_t n)
 	}
 	return dst;
 }
+
+// Return a pointer to the first occurrence of 'c' in 's',
+// or a pointer to the string-ending null character is the string has no 'c'
+char *
+strfind(const char *s, char c)
+{
+	const char *temp = s;
+	while (*temp) {
+		if (*temp == c)
+			return (char *)temp;
+		temp ++;
+	}
+	return NULL;
+}

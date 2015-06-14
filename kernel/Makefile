@@ -8,8 +8,10 @@ KERN_SRCFILES := kernel/entry.S \
 				 kernel/console.c \
 				 kernel/printf.c \
 				 kernel/monitor.c \
+				 kernel/kdebug.c \
 				 lib/printfmt.c \
-				 lib/string.c
+				 lib/string.c \
+				 lib/assert.c
 
 # Only build files if they exist.
 # KERN_SRCFILES	:= $(wildcard $(KERN_SRCFILES))

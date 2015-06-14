@@ -3,6 +3,7 @@
 
 #ifndef __ASSEMBLER__
 #include <include/types.h>
+#include <include/mmu.h>
 #endif
 
 #define KERNBASE	0xF0000000

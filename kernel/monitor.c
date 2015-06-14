@@ -2,13 +2,14 @@
 #include <include/x86.h>
 #include <include/types.h>
 #include <kernel/monitor.h>
-
+#include <kernel/kdebug.h>
 extern uint32_t	bootstacktop;
 
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
 	int i;
+	Eipdebuginfo dbg_info;
 	uintptr_t ebp = (uintptr_t) read_ebp();
 
 	cprintf("BOOT STACKTOP = %p\n", bootstacktop);
@@ -25,10 +26,16 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 
 		cprintf("ebp %p eip %p args ", ebp, eip);
 
+
 		for (i = 0; i < 5; i++) {
 			cprintf("%x ", *((uint32_t *)ebp + 2 + i));
 		}
 
+		debuginfo_eip(eip, &dbg_info);
+
+		cprintf("\t%s:%d: %.*s+%d\n", dbg_info.eip_file, dbg_info.eip_line,
+				dbg_info.eip_fn_namelen, dbg_info.eip_fn_name,
+				eip - dbg_info.eip_fn_saddr);
 		cprintf("\n");
 
 		// ebp is set to its caller
