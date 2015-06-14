@@ -9,7 +9,7 @@ int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
 	int i;
-	Eipdebuginfo dbg_info;
+	Eipdebuginfo dbg_info = {};
 	uintptr_t ebp = (uintptr_t) read_ebp();
 
 	cprintf("BOOT STACKTOP = %p\n", bootstacktop);
@@ -33,8 +33,11 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 
 		debuginfo_eip(eip, &dbg_info);
 
-		cprintf("\t%s:%d: %.*s+%d\n", dbg_info.eip_file, dbg_info.eip_line,
-				dbg_info.eip_fn_namelen, dbg_info.eip_fn_name,
+		cprintf("\n%s:%d: %.*s+%d\n", 
+				dbg_info.eip_file,
+				dbg_info.eip_line,
+				dbg_info.eip_fn_namelen,
+				dbg_info.eip_fn_name,
 				eip - dbg_info.eip_fn_saddr);
 		cprintf("\n");
 

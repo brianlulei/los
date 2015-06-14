@@ -64,6 +64,9 @@ pre-qemu: .gdbinit
 qemu: $(IMAGES)
 	$(QEMU) $(QEMUOPTS)
 
+qemu-nox: $(IMAGES)
+	$(QEMU) -nographic $(QEMUOPTS)
+
 qemu-gdb: $(IMAGES) pre-qemu
 	@echo "***"
 	@echo "*** Use Ctrl-a x to exit qemu"

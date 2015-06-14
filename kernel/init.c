@@ -1,6 +1,5 @@
 #include <include/stdio.h>
 #include <include/string.h>
-
 #include <kernel/console.h>
 #include <kernel/monitor.h>
 

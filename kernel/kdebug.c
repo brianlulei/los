@@ -38,12 +38,16 @@ stab_binsearch(const Stab *stab, int *region_left, int *region_right,
 	int any_matches = 0;
 
 	while (l <= r) {
-		int mid = (l + r)/2;
-		while (mid >= l && stab[mid].n_type != type)
+		int middle_value = (l + r)/2;
+		int mid =  middle_value;
+
+		while (mid >= l && stab[mid].n_type != type) {
+			//cprintf("loop -- 1, l = %d, mid = %d\n", l, mid);
 			mid--;
+		}
 
 		if (mid < l) {	// no match in [l, mid]
-			l = mid + 1;
+			l = middle_value + 1;
 			continue;
 		}
 
@@ -65,7 +69,6 @@ stab_binsearch(const Stab *stab, int *region_left, int *region_right,
 			addr ++; // why ++ addr?
 		}
 	}
-
 	if (!any_matches) // couldn't find any stab with the 'type'
 		*region_right = *region_left - 1;
 }
@@ -99,16 +102,22 @@ debuginfo_eip(uintptr_t addr, Eipdebuginfo * info)
 
 	// Now we need to find the corrct file, function, line 
 	// information for the 'eip'.
-	cprintf("point 1");
+
+	/*
+	const Stab *temp = stab_start;
+	for ( ;temp <= stab_end; temp++) {
+		cprintf("type: %d, ", temp->n_type);
+		cprintf("value: %p ", temp->n_value);
+		cprintf("\n");
+		temp++;
+	}*/
 
 	lfile = 0;
 	rfile = stab_end - stab_start - 1; // since start from 0
 	stab_binsearch(stab_start, &lfile, &rfile, N_SO, addr);
-	cprintf("point 1.1");
 	if (lfile == 0)
 		return -1;
 
-	cprintf("point 2");
 	lfun = lfile;
 	rfun = rfile;
 	stab_binsearch(stab_start, &lfun, &rfun, N_FUN, addr);
@@ -134,14 +143,13 @@ debuginfo_eip(uintptr_t addr, Eipdebuginfo * info)
 
 	// Ignore stuff adter ':'
 	info->eip_fn_namelen = strfind(info->eip_fn_name, ':') - info->eip_fn_name;
-	cprintf("point 3");
 
 	// Search within [lline, rline] for the line number stab.
 	// If found, set info->eip_line to the right number.
 	// If not found, return -1.
 	stab_binsearch(stab_start, &lline, &rline, N_SLINE, addr);
 	if (lline <= rline) // found
-		info->eip_line = lline;
+		info->eip_line = stab_start[lline].n_desc;
 	else
 		return -1;
 
@@ -149,6 +157,12 @@ debuginfo_eip(uintptr_t addr, Eipdebuginfo * info)
 	// can interpolate code from a different file
 	// such included source files use the N_SOL stab type
 
-	info->eip_file = stabstr_start + stab_start[lline].n_strx;
+	while (lline >= lfile
+			&& stab_start[lline].n_type != N_SOL
+			&& (stab_start[lline].n_type != N_SO || !stab_start[lline].n_value))
+		lline--;
+	if (lline >= lfile && stab_start[lline].n_strx < stabstr_end - stabstr_start)
+		info->eip_file = stabstr_start + stab_start[lline].n_strx;
+
 	return 0;
 }
