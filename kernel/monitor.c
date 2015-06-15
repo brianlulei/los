@@ -33,7 +33,7 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 
 		debuginfo_eip(eip, &dbg_info);
 
-		cprintf("\n%s:%d: %.*s+%d\n", 
+		cprintf("\n%s:%d: %.*s+%d", 
 				dbg_info.eip_file,
 				dbg_info.eip_line,
 				dbg_info.eip_fn_namelen,
@@ -46,4 +46,20 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	}
 
 	return 0;
+}
+
+void
+monitor(struct Trapframe *tf)
+{
+	char *buf;
+
+	cprintf("Welcome to the LOS kernel monitor\n");
+	cprintf("Type 'help' for a list of commands.\n");
+
+	while (1) {
+		buf = readline("K> ");
+		if (buf != NULL)
+			if (runcmd(buf, tf) < 0)
+				break;
+	}
 }

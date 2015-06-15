@@ -2,6 +2,7 @@
 #include <include/memlayout.h>
 #include <include/x86.h>
 #include <include/string.h>
+#include <include/kbdreg.h>
 
 static uint32_t addr_6845;
 static uint16_t	* crt_buf;
@@ -119,7 +120,104 @@ cons_init(void)
 	cga_init();
 }
 
+/***** Keyboard input code *****/
+
+#define E0ESC	(1<<6)
+
+
+/* Get data from the keyboard.
+ * Return the ASCII code, if it is a character
+ * Return 0, if it is not a character.
+ * Return -1, if no data.
+ */
+
+static int
+kbd_proc_data(void)
+{
+	int c;
+	uint8_t data;
+	static uint32_t shift;
+
+	if ((inb(KBSTATP) & KBS_DIB) == 0)
+		return -1;
+
+	data = inb(KBDATAP);
+
+	if (data == 0xE0) {
+		// E0 escape character
+		shift |= E0ESC;
+		return 0;
+	} else if (data & 0x80) {
+		// Key releasedi
+		data = (shift & E0ESC ? data : data & 0x7F);
+		// remove corresponding label 
+		shift &= ~(shiftcode[data] | E0ESC);
+		return 0; 
+	} else if (shift & E0ESC) {
+		// Last character was E0 escape; or with 0x80
+		data |= 0x80;
+		shift &= ~E0ESC;
+	}
+}
+
+void
+kbd_intr(void)
+{
+	cons_intr(kbd_proc_data);
+}
+
+
 /* Implement functions defined in stdio.h */
+
+#define CONSBUFSIZE 512
+
+static struct {
+	uint8_t		buf[CONSBUFSIZE];
+	uint32_t	rpos;	// read position
+	uint32_t	wpos;	// write position
+} cons;
+
+
+// called by devide interrupt routines to feed input characters
+// into the circular console input buffer.
+static void
+cons_intr(int (*proc)(void))
+{
+	int c;
+
+	while (( c = (*proc)()) != -1) {
+		if (c == 0)
+			continue;
+		cons.buf[cons.wpos++] = c;
+		if (cons.wpos == CONSBUFSIZE)
+			cons.wpos = 0;
+	}
+}
+
+
+// return the next input character from the console, or 0 if none waiting
+int
+cons_getc(void)
+{
+	int c;
+
+	// poll for any pending input characters,
+	// so that this function works wven when interrupts are disabled
+	// (e.g., when called from the kernel monitor).
+
+	// serial_intr();
+	kbd_intr();
+
+	// grab the next character from the input buffer.
+	if (cons.rops != cons.wpos) {
+		c = cons.buf[cons.rpos++];
+		if (cons.rpos == CONBUFSIZE)
+			cons.rpos = 0;
+		return c;
+	}
+	return 0;
+}
+
 static void
 cons_putc(uint16_t c)
 {
@@ -130,4 +228,20 @@ void
 cputchar(int c)
 {
 	cons_putc(c);
+}
+
+int
+getchar(void)
+{
+	int c;
+	
+	while ((c = cons_getc()) == 0)
+		/* do nothing */;
+	return c;
+}
+
+int iscons(int fdnum)
+{
+	// used by readline
+	return 1;
 }

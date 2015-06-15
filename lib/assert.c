@@ -9,8 +9,6 @@
  */
 const char *panicstr;
 
-
-
 void
 _panic(const char *file, int line, const char *fmt, ...)
 {

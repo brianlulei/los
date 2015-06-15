@@ -27,6 +27,6 @@ i386_init(void)
 
 	// Initialize the console.
 	cons_init();
-	cprintf("Finally we see something from screen!");
-	test_backtrace(5);
+	cprintf("Finally we see something from screen!\n");
+	test_backtrace(2);
 }
