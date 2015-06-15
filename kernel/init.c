@@ -29,4 +29,7 @@ i386_init(void)
 	cons_init();
 	cprintf("Finally we see something from screen!\n");
 	test_backtrace(2);
+
+	while(1)
+		monitor(NULL);
 }

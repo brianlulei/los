@@ -16,4 +16,8 @@ int		vcprintf(const char *fmt, va_list);
 
 /* lib/printfmt.c */
 void	vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list);		
+
+
+/* lib/readline.c */
+char *	readline(const char *prompt);
 #endif

@@ -11,7 +11,8 @@ KERN_SRCFILES := kernel/entry.S \
 				 kernel/kdebug.c \
 				 lib/printfmt.c \
 				 lib/string.c \
-				 lib/assert.c
+				 lib/assert.c \
+				 lib/readline.c
 
 # Only build files if they exist.
 # KERN_SRCFILES	:= $(wildcard $(KERN_SRCFILES))

@@ -3,6 +3,7 @@
 #include <include/types.h>
 #include <kernel/monitor.h>
 #include <kernel/kdebug.h>
+
 extern uint32_t	bootstacktop;
 
 int
@@ -59,7 +60,8 @@ monitor(struct Trapframe *tf)
 	while (1) {
 		buf = readline("K> ");
 		if (buf != NULL)
-			if (runcmd(buf, tf) < 0)
-				break;
+			cprintf("%s\n", buf);
+			//if (runcmd(buf, tf) < 0)
+			//	break;
 	}
 }
