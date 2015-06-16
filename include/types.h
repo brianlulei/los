@@ -30,5 +30,18 @@ typedef int32_t				intptr_t;
 typedef uint32_t			uintptr_t;
 typedef uint32_t			physaddr_t;
 
+// Round up to the nearest multiple of n
+// typeof declares y with the type of what x points to.
+#define ROUNDDOWN(a, n)					\
+({										\
+	uint32_t __a = (uint32_t) (a);		\
+	(typeof(a)) (__a - __a % (n));		\
+})
 
+// Round up to the nearest multiple of n
+#define ROUNDUP(a, n)					\
+({										\
+	uint32_t __n = (uint32_t) (n);		\
+	(typeof (a)) (ROUNDDOWN((uint32_t) (a) + __n - 1, __n));	\
+})
 #endif

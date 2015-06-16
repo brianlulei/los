@@ -39,6 +39,26 @@ memmove(void *dst, const void *src, size_t n)
 	return dst;
 }
 
+int
+strcmp(const char *s, const char *t)
+{
+	while (*s && *t && *s == *t) {
+		s++;
+		t++;
+	}
+	return (int) ((unsigned int)*s - (unsigned int)*t);
+}
+
+char *
+strchr(const char *s, char c)
+{
+	for (; *s; s++) {
+		if (*s == c)
+			return (char *) s;
+	}
+	return 0;
+}
+
 // Return a pointer to the first occurrence of 'c' in 's',
 // or a pointer to the string-ending null character is the string has no 'c'
 char *
