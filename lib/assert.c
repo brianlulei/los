@@ -29,8 +29,7 @@ _panic(const char *file, int line, const char *fmt, ...)
 
 dead:
 	while (1)
-	/* do nothing */
-		;
+		monitor(NULL);
 }
 
 void

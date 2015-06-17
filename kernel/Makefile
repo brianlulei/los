@@ -9,6 +9,8 @@ KERN_SRCFILES := kernel/entry.S \
 				 kernel/printf.c \
 				 kernel/monitor.c \
 				 kernel/kdebug.c \
+				 kernel/pmap.c \
+				 kernel/kclock.c \
 				 lib/printfmt.c \
 				 lib/string.c \
 				 lib/assert.c \

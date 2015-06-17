@@ -2,6 +2,7 @@
 #include <include/string.h>
 #include <kernel/console.h>
 #include <kernel/monitor.h>
+#include <kernel/pmap.h>
 
 // Test the stack backtrace function
 void
@@ -28,7 +29,8 @@ i386_init(void)
 	// Initialize the console.
 	cons_init();
 	cprintf("Finally we see something from screen!\n");
-	test_backtrace(2);
+
+	mem_init();
 
 	while(1)
 		monitor(NULL);
