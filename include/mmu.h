@@ -19,6 +19,9 @@
 #define PDXSHIFT	22		// offset of PDX in a linear address
 
 
+// page number field of physical address
+#define PGNUM(la)	(((uintptr_t) (la)) >> PTXSHIFT)
+
 /*
  *	Macros to build GDT entries in assembly.
  */
