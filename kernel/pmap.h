@@ -6,6 +6,9 @@
 
 extern size_t npages;
 
+void	mem_init(void);
+void	page_init(void);
+
 /* This macro takes a kernel virtual address (above KERNBASE)
  * and returns the corresponding physical address.
  */

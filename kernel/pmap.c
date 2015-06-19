@@ -11,7 +11,9 @@ static size_t	npages_basemem;	// Amount of base memory (in pages)
 
 
 // These variables are set in mem_init()
-pde_t *kern_pgdir;	// Kernel's initial page directory
+pde_t *kern_pgdir;					// Kernel's initial page directory
+PageInfo *pages;					// physical page state array
+static PageInfo *page_free_list;	// Free list of physical pages
 
 /*******************************************
  * Detect machine's physical memory setup. *
@@ -94,8 +96,64 @@ mem_init(void)
 	// Find out how much memory the machine has (npages & npages_basemem).
 	i386_detect_memory();
 
+	/********************************
+	 * Create initial page directory
+	 ********************************/
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
 	memset(kern_pgdir, 0, PGSIZE);
 
+	/***********************************************************
+	 * Recursively insert PD in itself as a page table, to form
+	 * a virtual page table at virtual address UVPT.
+	 ***********************************************************/
+	//kern_pgdir
+
+	/*************************************************************************
+     * Allocate an array of npages 'struct PageInfo's and store it in 'pages'.
+	 * The kernel uses this array to keep track of physical pages: for each
+	 * physical page, there is a corresponding struct PageInfo in this array.
+	 * 'npages' is the number of physical pages in memory. Use memset to
+	 * initialize all fields of each struct PageInfo to 0.
+	 *************************************************************************/
+	uint32_t pginfo_size = npages * sizeof(PageInfo);
+	pages = (PageInfo *) boot_alloc(pginfo_size);
+	memset(pages, 0, pginfo_size);
+
+	/*************************************************************************
+	 * Now that we've allocated the initial kernel data structures, we set up
+	 * the list of free physical pages. Once we've done so, all further memory
+	 * management will go through the page_* functions. In particular, we can
+	 * now map memory using boot_map_region or page_insert
+	 *************************************************************************/
+
+	page_init();
 	panic("mem_init: This function is not finished\n");
+}
+ 
+void
+page_init(void)
+{
+	// The example code here marks all physical pages as free.
+    // However this is not truly the case.  What memory is free?
+    //  1) Mark physical page 0 as in use.
+    //     This way we preserve the real-mode IDT and BIOS structures
+    //     in case we ever need them.  (Currently we don't, but...)
+    //  2) The rest of base memory, [PGSIZE, npages_basemem * PGSIZE)
+    //     is free.
+    //  3) Then comes the IO hole [IOPHYSMEM, EXTPHYSMEM), which must
+    //     never be allocated.
+    //  4) Then extended memory [EXTPHYSMEM, ...).
+    //     Some of it is in use, some is free. Where is the kernel
+    //     in physical memory?  Which pages are already in use for
+    //     page tables and other data structures?
+    //  
+    // Change the code to reflect this.
+    // NB: DO NOT actually touch the physical memory corresponding to
+    // free pages!
+    size_t i;
+    for (i = 0; i < npages; i++) {
+        pages[i].pp_ref = 0;
+        pages[i].pp_link = page_free_list;
+        page_free_list = &pages[i];
+    }   
 }
