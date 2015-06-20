@@ -5,6 +5,7 @@
 #define NULL ((void*) 0)
 #endif
 
+typedef enum{false, true} bool;
 
 // Explicitly-sized versions of integer types
 typedef	signed char			int8_t;

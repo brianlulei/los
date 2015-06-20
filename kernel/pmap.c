@@ -48,6 +48,14 @@ i386_detect_memory(void)
 
 }
 
+
+// -------------------------------------
+// Set up memory mappings
+// -------------------------------------
+
+static void		check_page_free_list(bool only_low_memory);
+
+
 /* This is a simple physical memory allocator used only while LOS
  * is setting up its virtual memory system.
  *
@@ -127,9 +135,19 @@ mem_init(void)
 	 *************************************************************************/
 
 	page_init();
+
+	check_page_free_list(1);
 	panic("mem_init: This function is not finished\n");
 }
  
+
+
+/*********************************************************************
+ * Initialize page structure and memory free list.
+ * After this is done, NEVER use boot_alloc again. ONLY use the page
+ * allocator functions below to allocate and deallocate physical
+ * memory via the page_free_list.
+ *********************************************************************/
 void
 page_init(void)
 {
@@ -148,12 +166,113 @@ page_init(void)
     //     page tables and other data structures?
     //  
     // Change the code to reflect this.
-    // NB: DO NOT actually touch the physical memory corresponding to
-    // free pages!
     size_t i;
-    for (i = 0; i < npages; i++) {
+	extern char end[];
+
+	// 1. Mark physical page 0 as in use.
+	pages[0].pp_ref = 0;
+	pages[0].pp_link = NULL;
+	
+	// 2. Mark [PGSIZE, npages_basemem * PGSIZE) free.
+	// i is starting from 1
+    for (i = 1; i < npages_basemem; i++) {
         pages[i].pp_ref = 0;
         pages[i].pp_link = page_free_list;
         page_free_list = &pages[i];
+    }
+
+	// 3. Mark [IOPHYSMEM, EXTPHYSMEM) in use.
+	uint32_t ext_page_num = PGNUM(ROUNDUP(EXTPHYSMEM, PGSIZE));
+	assert(npages > ext_page_num);
+
+    for (i = npages_basemem; i < ext_page_num; i++) {
+        pages[i].pp_ref = 0;
+        pages[i].pp_link = NULL;
+    }
+
+	// 4. Mark [EXTPHYSMEM, end) in use.
+	uint32_t kernel_end_page_num = PGNUM(ROUNDUP(PADDR(end), PGSIZE));
+
+	for (i = ext_page_num; i < kernel_end_page_num; i++) {
+		pages[i].pp_ref = 0;
+		pages[i].pp_link = NULL;
+	}
+	
+	// 5. Mark kern_pgdir in use.
+	uint32_t pginfo_size = npages * sizeof(PageInfo);
+	uint32_t pginfo_page_num = PGNUM(ROUNDUP(pginfo_size, PGSIZE));
+
+	// additional 1 is for initial page directory
+	for (i = ext_page_num; i < kernel_end_page_num + pginfo_page_num + 1; i++) {
+		pages[i].pp_ref = 0;
+		pages[i].pp_link = NULL;
+	}
+
+	// 6. Mark rest pages free.
+	for (; i < npages; i++) {
+        pages[i].pp_ref = 0;
+        pages[i].pp_link = page_free_list;
+        page_free_list = &pages[i];	
+	}
+}
+
+
+// -----------------------------------------------------
+// Checking functions
+// -----------------------------------------------------
+
+static void
+check_page_free_list(bool only_low_memory)
+{
+    PageInfo *pp;
+    unsigned pdx_limit = only_low_memory ? 1 : NPDENTRIES;
+    int nfree_basemem = 0, nfree_extmem = 0;
+    char *first_free_page;
+
+    if (!page_free_list)
+        panic("'page_free_list' is a null pointer!");
+
+    if (only_low_memory) {
+        // Move pages with lower addresses first in the free
+        // list, since entry_pgdir does not map all pages.
+        PageInfo *pp1, *pp2;
+        PageInfo **tp[2] = { &pp1, &pp2 };
+        for (pp = page_free_list; pp; pp = pp->pp_link) {
+            int pagetype = PDX(page2pa(pp)) >= pdx_limit;
+            *tp[pagetype] = pp; 
+            tp[pagetype] = &pp->pp_link;
+        }
+        *tp[1] = 0;
+        *tp[0] = pp2;
+        page_free_list = pp1;
     }   
+
+    // if there's a page that shouldn't be on the free list,
+    // try to make sure it eventually causes trouble.
+    for (pp = page_free_list; pp; pp = pp->pp_link)
+        if (PDX(page2pa(pp)) < pdx_limit)
+            memset(page2kva(pp), 0x97, 128);
+
+    first_free_page = (char *) boot_alloc(0);
+    for (pp = page_free_list; pp; pp = pp->pp_link) {
+        // check that we didn't corrupt the free list itself
+        assert(pp >= pages);
+        assert(pp < pages + npages);
+        assert(((char *) pp - (char *) pages) % sizeof(*pp) == 0);
+
+        // check a few pages that shouldn't be on the free list
+        assert(page2pa(pp) != 0);
+        assert(page2pa(pp) != IOPHYSMEM);
+        assert(page2pa(pp) != EXTPHYSMEM - PGSIZE);
+        assert(page2pa(pp) != EXTPHYSMEM);
+        assert(page2pa(pp) < EXTPHYSMEM || (char *) page2kva(pp) >= first_free_page);
+
+        if (page2pa(pp) < EXTPHYSMEM)
+            ++nfree_basemem;
+        else
+            ++nfree_extmem;
+    }
+
+    assert(nfree_basemem > 0);
+    assert(nfree_extmem > 0);
 }
