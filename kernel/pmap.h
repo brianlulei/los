@@ -55,4 +55,8 @@ page2kva(PageInfo *pp)
 {
 	return KADDR(page2pa(pp));
 }
+
+enum {
+	ALLOC_ZERO = 1<<0,	
+};
 #endif

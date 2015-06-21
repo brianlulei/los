@@ -54,6 +54,7 @@ i386_detect_memory(void)
 // -------------------------------------
 
 static void		check_page_free_list(bool only_low_memory);
+static void		check_page_alloc(void);
 
 
 /* This is a simple physical memory allocator used only while LOS
@@ -137,6 +138,7 @@ mem_init(void)
 	page_init();
 
 	check_page_free_list(1);
+	check_page_alloc();
 	panic("mem_init: This function is not finished\n");
 }
  
@@ -217,6 +219,51 @@ page_init(void)
 }
 
 
+/******************************************************************************
+ * Allocates a physical page. If (alloc_flags & ALLOC_ZERO), fills the entire
+ * returned physical page with '\0' bytes. Does NOT increment the reference
+ * count of the page - the caller must do these if necessary (either explicitly
+ * or via page_insert).
+ *
+ * Be sure to set the pp_link field of the allocated page to NULL so
+ * page_free can check for double-free bugs.
+ * 
+ * Returns NULL if out of free memory.
+ ******************************************************************************/
+PageInfo *
+page_alloc(int alloc_flags)
+{
+	PageInfo * page = NULL;
+	
+	if (page_free_list) {	// if it has free page
+		page = page_free_list;
+		page_free_list = page_free_list->pp_link;
+		page->pp_link = NULL;
+
+		if (alloc_flags && ALLOC_ZERO)
+			memset(page2kva(page), 0, PGSIZE);
+	}
+
+	return page;
+}
+
+/******************************************************************
+ * Return a page to the free list.
+ * This function should only be called when pp->pp_ref reaches 0.
+ ******************************************************************/
+void
+page_free(PageInfo *pp)
+{
+	// You may want to panic if pp->pp_ref is nonzero or pp->pp_link is not NULL
+	if (pp == NULL)
+		return;
+
+	assert(!pp->pp_ref && !pp->pp_link);
+
+	pp->pp_link = page_free_list;
+	page_free_list = pp;
+}
+
 // -----------------------------------------------------
 // Checking functions
 // -----------------------------------------------------
@@ -275,4 +322,79 @@ check_page_free_list(bool only_low_memory)
 
     assert(nfree_basemem > 0);
     assert(nfree_extmem > 0);
+}
+
+// Check the physical page allocator (page_alloc(), page_free(), and page_init()).
+static void
+check_page_alloc(void)
+{
+	PageInfo *pp, *pp0, *pp1, *pp2;
+	int nfree;
+	PageInfo *fl;
+	char *c;
+	int i;
+
+	if (!pages)
+		panic("'pages' is a null pointer!");
+
+	// check number of free pages
+	for (pp = page_free_list, nfree = 0; pp; pp = pp->pp_link)
+		++nfree;
+
+	// should be able to allocate three pages;
+	pp0 = pp1 = pp2 = 0;
+	assert((pp0 = page_alloc(0)));
+	assert((pp1 = page_alloc(0)));
+	assert((pp2 = page_alloc(0)));
+
+	assert(pp0);
+	assert(pp1 && pp1 != pp0);
+	assert(pp2 && pp2 != pp1 && pp2 != pp0);
+	assert(page2pa(pp0) < npages * PGSIZE);
+	assert(page2pa(pp1) < npages * PGSIZE);
+	assert(page2pa(pp2) < npages * PGSIZE);
+
+	// temporarily steal the rest of the free pages
+	fl = page_free_list;
+	page_free_list = 0;
+
+	// should be no free memory
+	assert(!page_alloc(0));
+
+	// free and re-allocate?
+	page_free(pp0);
+	page_free(pp1);
+	page_free(pp2);
+	pp0 = pp1 = pp2 = 0;
+	assert((pp0 = page_alloc(0)));
+	assert((pp1 = page_alloc(0)));
+	assert((pp2 = page_alloc(0)));
+	assert(pp0);
+	assert(pp1 && pp1 != pp0);
+	assert(pp2 && pp2 != pp1 && pp2 != pp0);
+	assert(!page_alloc(0));
+
+	// test flags
+	memset(page2kva(pp0), 1, PGSIZE);
+	page_free(pp0);
+	assert((pp = page_alloc(ALLOC_ZERO)));
+	assert(pp && pp0 == pp);
+	c = page2kva(pp);
+	for (i = 0; i < PGSIZE; i++)
+		assert(c[i] == 0);
+
+	// give free list back
+	page_free_list = fl;
+
+	// free the pages we took
+	page_free(pp0);
+	page_free(pp1);
+	page_free(pp2);
+
+	// number of free pages should be the same
+	for (pp = page_free_list; pp; pp = pp->pp_link)
+		--nfree;
+	assert(nfree == 0);
+
+	cprintf("check_page_alloc() succeeded!\n");	
 }
