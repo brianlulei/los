@@ -23,7 +23,10 @@
 #define PGNUM(la)	(((uintptr_t) (la)) >> PTXSHIFT)
 
 // page directory index
-#define PDX(la)		(((uintptr_t) (la)) >> PDXSHIFT)
+#define PDX(la)		((((uintptr_t) (la)) >> PDXSHIFT) & 0x3FF)
+
+// page table index
+#define PTX(la)		((((uintptr_t) (la)) >> PTXSHIFT) & 0x3FF)
 
 /*
  *	Macros to build GDT entries in assembly.
@@ -48,6 +51,9 @@
 #define PTE_D	0x040		// Dirty
 #define PTE_PS	0x080		// Page Size
 #define PTR_G	0x100		// Global
+
+// Adress in page table or page directory entry
+#define PTE_ADDR(pte) ((physaddr_t) (pte) & ~0xFFF)
 
 // Descriptor Type Bits
 #define STA_X	0x08		// Executable (code) segment 

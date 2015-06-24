@@ -9,6 +9,7 @@ static __inline void insl(int port, void *addr, int cnt) __attribute__((always_i
 static __inline void outb(int port, uint8_t data) __attribute__((always_inline));
 static __inline void outw(int port, uint16_t data) __attribute__((always_inline));
 
+static __inline void invlpg(void *addr) __attribute__((always_inline));
 
 
 static __inline uint8_t
@@ -46,6 +47,12 @@ read_ebp(void)
 	uint32_t ebp;
 	__asm __volatile("movl %%ebp, %0" : "=r" (ebp));
 	return ebp;
+}
+
+static __inline void
+invlpg(void *addr)
+{
+	__asm __volatile("invlpg (%0)" : : "r" (addr): "memory");
 }
 
 #endif
