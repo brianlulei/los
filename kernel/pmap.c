@@ -327,7 +327,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		return NULL;
 
 	page->pp_ref ++;
-	*pgd_entry = page2pa(page) | PTE_P | PTE_W | PTE_U;
+	*pgd_entry = page2pa(page) | PTE_P | PTE_U;
 	return (pte_t *) KADDR(page2pa(page)) + PTX(va);
 }
 
@@ -367,13 +367,12 @@ page_insert(pde_t *pgdir, PageInfo *pp, void *va, int perm)
 
 	if (*pt_entry == 0) {
 		pp->pp_ref ++;
-		*pt_entry = pa | perm | PTE_P;
 	} else if (PTE_ADDR(*pt_entry) != pa) {
 		page_remove(pgdir, va);
 		tlb_invalidate(pgdir, va);
 		pp->pp_ref ++;
-		*pt_entry = pa | perm | PTE_P;
 	}
+	*pt_entry = pa | perm | PTE_P;
 	return 0;
 }
 
@@ -399,7 +398,7 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 	if (!(*pt_entry & PTE_P))
 		return NULL;
 
-	if (!pte_store)
+	if (pte_store)
 		*pte_store = pt_entry;
 
 	return pa2page(PTE_ADDR(*pt_entry));
@@ -426,9 +425,9 @@ page_remove(pde_t *pgdir, void *va)
 	if (!page)
 		return;
 
-	if (*pt_entry & PTE_P)
+	if (!(*pt_entry & PTE_P))
 		return;
-
+	
 	page_decref(page);
 
 	*pt_entry = 0;
@@ -592,14 +591,16 @@ static physaddr_t
 check_va2pa(pde_t * pgdir, uintptr_t va)
 {
 	pte_t *p;
-
 	pgdir = &pgdir[PDX(va)];
+
 	if (!(*pgdir & PTE_P))
 		return ~0;
 
 	p = (pte_t *) KADDR(PTE_ADDR(*pgdir));
+
 	if (!(p[PTX(va)] & PTE_P))
 		return ~0;
+
 	return PTE_ADDR(p[PTX(va)]);
 }
 
@@ -692,6 +693,7 @@ check_page(void)
     // ... and ref counts should reflect this
     assert(pp1->pp_ref == 2); 
     assert(pp2->pp_ref == 0); 
+
 
     // pp2 should be returned by page_alloc
     assert((pp = page_alloc(0)) && pp == pp2);
