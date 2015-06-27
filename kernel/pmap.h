@@ -4,8 +4,10 @@
 #include <include/assert.h>
 #include <include/memlayout.h>
 
+extern char bootstacktop[], bootstack[];
 extern size_t		npages;
 extern PageInfo *	pages;
+
 
 void		mem_init(void);
 void		page_init(void);

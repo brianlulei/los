@@ -26,7 +26,19 @@
 
 #define ULIM		MMIOBASE
 
+/*
+ * User read-only mappings! Anything below here til UTOP are readonly to user.
+ * They are global pages mapped in at env allocation time
+ */
 
+// User read-only vritual page table
+#define UVPT		(ULIM - PTSIZE)
+
+// Read-only copies of the PageInfo structures
+#define UPAGES		(UVPT - PTSIZE)
+
+// Read-only copies of the global env structures
+#define UENVS		(UPAGES - PTSIZE)
 
 
 #ifndef __ASSEMBLER__
