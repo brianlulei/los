@@ -3,6 +3,7 @@
 #include <kernel/console.h>
 #include <kernel/monitor.h>
 #include <kernel/pmap.h>
+#include <kernel/env.h>
 
 // Test the stack backtrace function
 void
@@ -28,9 +29,14 @@ i386_init(void)
 
 	// Initialize the console.
 	cons_init();
-	cprintf("Finally we see something from screen!\n");
 
+	// Memory management initialization functions
 	mem_init();
+
+	// User environment initialization functions
+	env_init();
+
+	cprintf("Success until here \n");
 
 	while(1)
 		monitor(NULL);

@@ -28,6 +28,19 @@
 // page table index
 #define PTX(la)		((((uintptr_t) (la)) >> PTXSHIFT) & 0x3FF)
 
+
+
+
+/*
+ *
+ * Part 2. Segmentation data structures and constants
+ *
+ */
+
+
+
+#ifdef __ASSEMBLER_
+
 /*
  *	Macros to build GDT entries in assembly.
  */
@@ -40,6 +53,54 @@
 	.word (((lim) >> 12) & 0xffff), ((base) & 0xffff);	\
 	.byte (((base) >> 16) & 0xff), (0x90 | (type)),		\
 		  (0xC0 | (((lim) >> 28) & 0x0f)), (((base) >> 24) & 0xff)
+
+#else
+
+#include <include/types.h>
+
+// Segment Descriptors
+struct Segdesc {
+	unsigned sd_lim_15_0 : 16;	// Low bits of segment limit
+	unsigned sd_base_15_0 : 16;	// Low bits of segment base address
+	unsigned sd_base_23_16 : 8;	// Middle bits of segment base address
+	unsigned sd_type : 4;		// Segment type (see STS_ constants)
+	unsigned sd_s : 1;			// 0 = system, 1 = application
+	unsigned sd_dpl : 2;		// Descriptor Privilege Level
+	unsigned sd_p : 1;			// Present
+	unsigned sd_lim_19_16: 4;	// High bits of segment limit
+	unsigned sd_avl : 1;		// Unused (available for software use)
+	unsigned sd_rsv : 1;		// Reserved
+	unsigned sd_db : 1;			// 0 = 16-bit segment, 1 = 32-bit segment
+	unsigned sd_g : 1;			// Granularity: limit scaled by 4K when set
+	unsigned sd_base_31_24: 8;	// High bits of segment base address
+};
+
+// Null segment
+#define SEG_NULL	(struct Segdesc) {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
+// Segment that is loadable but faults when used
+#define SEG_FAULT	(struct Segdesc) {0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0}
+
+// Normal segment
+#define SEG(type, base, lim, dpl)	(struct Segdesc)				\
+{ ((lim) >> 12) & 0xffff, (base) & 0xffff, ((base) >> 16) & 0xff,	\
+  type, 1, dpl, 1, (lim) >> 28, 0, 0, 1, 1,				\
+  base >> 24 }	
+
+
+#define SEG16(type, base, lim, dpl)	(struct Segdesc)				\
+{ (lim) & 0xffff, (base) & 0xffff, ((base) >> 16) & 0xff,			\
+  type, 1, dpl, 1, (lim) >> 16, 0, 0, 1, 0,							\
+  (base) >> 24 }
+
+// Pseudo-descriptors used for LGDT, LLDT, and LIDT instructions.
+struct Pseudodesc {
+	uint16_t	pd_lim;		// Limit
+	uint32_t	pd_base;	// Base address
+} __attribute__((packed));
+
+#endif 
+
 
 // Page table/directory entry flags
 #define PTE_P	0x001		// Present

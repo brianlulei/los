@@ -14,6 +14,9 @@ static __inline void lcr0(uint32_t val) __attribute__((always_inline));
 
 static __inline void lcr3(uint32_t val) __attribute__((always_inline));
 
+static __inline void lldt(uint16_t sel) __attribute__((always_inline));
+static __inline void lgdt(void *p) __attribute__((always_inline));
+
 static __inline void invlpg(void *addr) __attribute__((always_inline));
 
 
@@ -81,4 +84,15 @@ invlpg(void *addr)
 	__asm __volatile("invlpg (%0)" : : "r" (addr): "memory");
 }
 
+static __inline void
+lgdt(void *p)
+{
+	__asm __volatile("lgdt (%0)" : : "r" (p));
+}
+
+static __inline void
+lldt(uint16_t sel)
+{
+	__asm __volatile("lldt %0" : : "r" (sel));
+}
 #endif
