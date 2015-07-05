@@ -56,4 +56,5 @@ struct Env{
 	pde_t *				env_pgdir;		// Kernel virtual address of page directory	
 };
 
+typedef struct Env Env;
 #endif

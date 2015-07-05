@@ -1,12 +1,15 @@
-#include <kernel/env.h>
+#include <include/env.h>
 #include <include/mmu.h>
 #include <include/x86.h>
 
-struct Env *envs	= NULL;			// All environments
-struct Env *curenv	= NULL;			// Current env
-static struct Env *	env_free_list;	// Free environment list
+#include <kernel/env.h>
+
+Env *envs	= NULL;					// All environments
+Env *curenv	= NULL;					// Current env
+static Env * env_free_list = NULL;	// Free environment list
 									// (linked by Env->env_link)
 
+#define ENVGENSHIFT	12				// >= LOGNENV
 /********************************************************************
  * Global descriptor table.
  *
@@ -24,7 +27,7 @@ static struct Env *	env_free_list;	// Free environment list
  * of that descriptor: 0 for kernel and 3 for user.
  ********************************************************************/
 
-struct Segdesc gdt[] = 
+Segdesc gdt[] = 
 {
 	// 0x0 - unused (always faluts -- for trapping NULL far pointers)
 	SEG_NULL,
@@ -45,7 +48,7 @@ struct Segdesc gdt[] =
 	[GD_TSS0 >> 3] = SEG_NULL
 };
 
-struct Pseudodesc gdt_pd = {
+Pseudodesc gdt_pd = {
 	sizeof(gdt) - 1, (unsigned long) gdt
 };
 
@@ -62,7 +65,14 @@ void
 env_init(void)
 {
 	// Set up envs array
+	/*uint32_t i;
 	
+	for (i = NENV - 1; i > 0; i--) {
+		envs[i].env_id = 0;
+		envs[i].env_link = env_free_list;
+		env_free_list = &envs[i];
+	}
+	*/
 	env_init_percpu();	
 }
 

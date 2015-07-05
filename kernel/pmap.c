@@ -1,11 +1,14 @@
 #include <include/memlayout.h>
-#include <kernel/pmap.h>
-#include <kernel/kclock.h>
 #include <include/stdio.h>
 #include <include/assert.h>
 #include <include/string.h>
 #include <include/x86.h>
 #include <include/error.h>
+#include <include/env.h>
+
+#include <kernel/pmap.h>
+#include <kernel/kclock.h>
+#include <kernel/env.h>
 
 // These variables are set by i386_detect_memory()
 size_t			npages;			// Amount of physical memory (in pages)
@@ -119,11 +122,14 @@ mem_init(void)
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
 	memset(kern_pgdir, 0, PGSIZE);
 
-	/***********************************************************
-	 * Recursively insert PD in itself as a page table, to form
-	 * a virtual page table at virtual address UVPT.
-	 ***********************************************************/
-	//kern_pgdir
+    //////////////////////////////////////////////////////////////////////
+    // Recursively insert PD in itself as a page table, to form
+    // a virtual page table at virtual address UVPT.
+    // (For now, you don't have understand the greater purpose of the
+    // following line.)
+
+    // Permissions: kernel R, user R
+	kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
 
 	/*************************************************************************
      * Allocate an array of npages 'struct PageInfo's and store it in 'pages'.
@@ -136,15 +142,13 @@ mem_init(void)
 	pages = (PageInfo *) boot_alloc(pginfo_size);
 	memset(pages, 0, pginfo_size);
 
-    //////////////////////////////////////////////////////////////////////
-    // Recursively insert PD in itself as a page table, to form
-    // a virtual page table at virtual address UVPT.
-    // (For now, you don't have understand the greater purpose of the
-    // following line.)
-
-    // Permissions: kernel R, user R
-	kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
-
+	/*************************************************************************
+	 * Make 'envs' point to an array of size 'NENV' of 'struct Env'.
+	 *************************************************************************/
+	uint32_t envs_size = NENV * sizeof(Env);
+	envs = (Env *) boot_alloc(envs_size);
+	memset(envs, 0, envs_size);
+	
 	/*************************************************************************
 	 * Now that we've allocated the initial kernel data structures, we set up
 	 * the list of free physical pages. Once we've done so, all further memory
@@ -166,7 +170,15 @@ mem_init(void)
 	//			(ie. perm = PTE_U | PTE_P)
 	//		- pages itself -- kernel RW, user NONE
 
-	boot_map_region(kern_pgdir, UPAGES, npages*sizeof(PageInfo), PADDR(pages), PTE_U|PTE_P);
+	boot_map_region(kern_pgdir, UPAGES, pginfo_size, PADDR(pages), PTE_U | PTE_P);
+
+	// Map the 'envs' array read-only by the user at linear address UENVS
+	// (i.e. perm = PTE_U | PTE_P).
+	// Permissions:
+	//	- the new image at UENVS -- kernel R, user R
+	//	- envs itself -- kernel RW, user NONE
+	
+	//boot_map_region(kern_pgdir, UENVS, envs_size, PADDR(envs), PTE_U | PTE_P);
 
 	// Use the physical memory that 'bootstack' refers to as the kernel stack.
 	// The kernel stack grows from virtual address KSTACKTOP. We consider the
@@ -179,6 +191,7 @@ mem_init(void)
 	//		Permissions: kernel RW, user NONE
 
 	boot_map_region(kern_pgdir, KSTACKTOP - KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_W);
+
 	// Map all of physical memory at KERNBASE.
 	// Ie. the VA range[KERNBASE, 2^32) should map to 
 	//	   the PA range[0, 2^32 - KERNBASE)
@@ -201,7 +214,6 @@ mem_init(void)
      * kern_pgdir wrong
 	 **********************************************************************/
 	lcr3(PADDR(kern_pgdir));
-
 	check_page_free_list(0);
 
 	// entry.S set the really import flags in cr0 (includeing enabling
@@ -279,8 +291,12 @@ page_init(void)
 	uint32_t pginfo_size = npages * sizeof(PageInfo);
 	uint32_t pginfo_page_num = PGNUM(ROUNDUP(pginfo_size, PGSIZE));
 
+	// 6. Mark envs array in use.
+	uint32_t envs_size = NENV * sizeof(Env);
+	uint32_t envs_page_num = PGNUM(ROUNDUP(envs_size, PGSIZE));
+
 	// additional 1 is for initial page directory
-	for (i = ext_page_num; i < kernel_end_page_num + pginfo_page_num + 1; i++) {
+	for (i = ext_page_num; i < kernel_end_page_num + pginfo_page_num + envs_page_num + 1; i++) {
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = NULL;
 	}
@@ -594,6 +610,7 @@ check_page_free_list(bool only_low_memory)
         assert(page2pa(pp) != IOPHYSMEM);
         assert(page2pa(pp) != EXTPHYSMEM - PGSIZE);
         assert(page2pa(pp) != EXTPHYSMEM);
+		//cprintf("addr = %p, fist_free_page = %p\n", page2kva(pp), first_free_page);
         assert(page2pa(pp) < EXTPHYSMEM || (char *) page2kva(pp) >= first_free_page);
 
         if (page2pa(pp) < EXTPHYSMEM)
