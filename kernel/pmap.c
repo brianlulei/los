@@ -178,7 +178,7 @@ mem_init(void)
 	//	- the new image at UENVS -- kernel R, user R
 	//	- envs itself -- kernel RW, user NONE
 	
-	//boot_map_region(kern_pgdir, UENVS, envs_size, PADDR(envs), PTE_U | PTE_P);
+	boot_map_region(kern_pgdir, UENVS, envs_size, PADDR(envs), PTE_U | PTE_P);
 
 	// Use the physical memory that 'bootstack' refers to as the kernel stack.
 	// The kernel stack grows from virtual address KSTACKTOP. We consider the
@@ -734,6 +734,7 @@ check_kern_pgdir(void)
         case PDX(UVPT):
         case PDX(KSTACKTOP-1):
         case PDX(UPAGES):
+		case PDX(UENVS):
             assert(pgdir[i] & PTE_P);
             break;
         default:
