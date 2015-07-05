@@ -49,6 +49,25 @@
 // Read-only copies of the global env structures
 #define UENVS		(UPAGES - PTSIZE)
 
+/*
+ * Top of user VM. User can manipulate VA from UTOP-1 and down!
+ */
+
+// Top of user-accessible VM
+#define UTOP		UENVS
+
+// Top of one-page user exception stack
+#define UXSTACKTOP	UTOP
+
+// Next page left invalid to guard against exception stack overflow; then:
+// Top of normal user stack
+#define USTACKTOP	(UTOP - 2*PGSIZE)
+
+// Where user programs generally begin
+#define UTEXT		(2*PTSIZE)
+
+
+
 
 #ifndef __ASSEMBLER__
 

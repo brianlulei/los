@@ -6,7 +6,8 @@
 
 extern char bootstacktop[], bootstack[];
 extern size_t		npages;
-extern PageInfo *	pages;
+extern PageInfo		*pages;
+extern pde_t		*kern_pgdir;
 
 
 void		mem_init(void);

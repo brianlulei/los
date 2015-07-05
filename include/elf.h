@@ -46,5 +46,19 @@ typedef struct elf32_shdr {
 	uint32_t	sh_entsize;
 } Elf_Shdr;
 
+// Values for Proghdr::p_type
+#define ELF_PROG_LOAD       1
+
+// Flag bits for Proghdr::p_flags
+#define ELF_PROG_FLAG_EXEC  1
+#define ELF_PROG_FLAG_WRITE 2
+#define ELF_PROG_FLAG_READ  4
+
+// Values for Secthdr::sh_type
+#define ELF_SHT_NULL        0
+#define ELF_SHT_PROGBITS    1
+#define ELF_SHT_SYMTAB      2
+#define ELF_SHT_STRTAB      3
+
 
 #endif

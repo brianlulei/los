@@ -1,8 +1,13 @@
 #include <include/env.h>
 #include <include/mmu.h>
 #include <include/x86.h>
+#include <include/error.h>
+#include <include/string.h>
+#include <include/memlayout.h>
+#include <include/elf.h>
 
 #include <kernel/env.h>
+#include <kernel/pmap.h>
 
 Env *envs	= NULL;					// All environments
 Env *curenv	= NULL;					// Current env
@@ -96,4 +101,248 @@ env_init_percpu()
 	// For good measure, clear the local descriptor table (LDT),
 	// since we don't use it.
 	lldt(0);
+}
+
+/********************************************************************
+ * Initialize the kernel virtual memory layout for environment e.
+ * Allocate a page directory, set e->env_pgdir accordingly,
+ * and initialize te kenel portion of the new environment's address space.
+ * DO NOT (yet) map anything into the user portion
+ * of the environment's virtual address space.
+ *
+ * Returns 0 on success, < 0 on error. Errors include:
+ *	-E_NO_MEM if page directory or table could not be allocated.
+ ********************************************************************/
+static int
+env_setup_vm(Env *e)
+{
+	int i;
+	PageInfo * p = NULL;
+
+	// Allocate a page for the page directory
+	if (!(p = page_alloc(ALLOC_ZERO)))
+		return -E_NO_MEM;
+
+	// Now, set e->env_pgdir and initialize the page directory
+	e->env_pgdir = (pde_t *) page2kva(p);
+	
+	// User kern_pgdir as a template to create pgdir for each Env
+	memmove(e->env_pgdir, kern_pgdir, PGSIZE);
+
+	// In general, pp_ref is not maintained for physical pages
+	// mapped only above UTOP, but env_pgdir is an exception
+	// -- need to increment env_pgdir's pp_ref for env_free to work.
+	p->pp_ref++;
+
+	// UVPT maps the env's own page table read-only.
+	// Permissions: kernel R, user R
+	e->env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_P | PTE_W;
+
+	return 0;	
+}
+
+/********************************************************************
+ * Allocates and initializes a new environment.
+ * On success, the new environements is stored in *newenv_store.
+ *
+ * Returns 0 on success, < 0 on failure. Errors include:
+ *	-E_NO_FREE_ENV if all NENVS environments are allocated
+ *	-E_NO_MEM no memory exhaustion
+ ********************************************************************/
+int
+env_alloc(Env **newenv_store, envid_t parent_id)
+{
+	int32_t generation;
+	Env *e;
+	int ret;
+
+	// all NENVS environments are allocated.
+	if (!(e = env_free_list))
+		return -E_NO_FREE_ENV;
+
+	// Allocate and set up the page directory for this environement.
+	if ((ret = env_setup_vm(e)) < 0)
+		return ret;
+
+	// Generate an env_id for this environment.
+	generation = (e->env_id + (1 << ENVGENSHIFT)) & ~(NENV - 1);
+	if (generation <= 0)
+		generation = 1 << ENVGENSHIFT;
+	e->env_id = generation | (e - envs);
+
+	// Set the basic status variables.
+	e->env_parent_id = parent_id;
+	e->env_type = ENV_TYPE_USER;
+	e->env_status = ENV_RUNNABLE;
+	e->env_runs = 0;
+
+	// Clear out all the saved register state,
+	// to prevent the register values of a prior environment
+	// inhabiting this Env structure from "leaking" into new Env.
+	memset(&e->env_tf, 0, sizeof(e->env_tf));
+
+	// Set up the appropiate initial values for the segment registers.
+	// GD_UD is the user data segment selector in the GDT, and 
+	// GD_UT is the user text segment selector (see inc/memlayout.h).
+	// The low 2 bits of each segment register contains the
+	// Requestor Privilege Level (RPL); 3 means user mode. When we 
+	// switch privilege levels, the hardware does various
+	// checks involving the RPL and the Descriptor Privilege Level (DPL)
+	// stored in the descriptors themselves.
+
+	e->env_tf.tf_ds = GD_UD | 3; 
+	e->env_tf.tf_es = GD_UD | 3; 
+	e->env_tf.tf_ss = GD_UD | 3; 
+	e->env_tf.tf_esp = USTACKTOP; 
+	e->env_tf.tf_cs = GD_UT | 3; 
+	// set e->env_tf.tf_eip later
+
+	// Commit the allocation
+	env_free_list = e->env_link;
+	*newenv_store = e;
+
+	cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
+	return 0;
+}
+
+/********************************************************************
+ * Allocate len bytes of physical memory for environment env,
+ * and map it at virtual address va in the environement's address space.
+ * Does not zero or otherwise initialize the mapped pages in any way.
+ * Pages should be writable by user and kernel.
+ * Panic if any allocation attemp fails.
+ ********************************************************************/
+static void
+region_alloc(Env *e, void *va, size_t len)
+{
+	// Hint: It is easier to use region_alloc if the caller can pass
+	// 'va' and 'len' values that are not page-aligned.
+	// You should round va down, and round (va+len) up.
+	PageInfo *p = NULL;
+	int ret;
+
+	uintptr_t va_page_aligned = (uintptr_t) ROUNDDOWN(va, PGSIZE);
+	uintptr_t end_page_aligned = (uintptr_t) ROUNDUP(va+len, PGSIZE);
+
+	while (va_page_aligned < end_page_aligned) {
+		if (!(p = page_alloc(ALLOC_ZERO)))
+			panic("memory allocation failed in region_alloc()");
+
+		ret = page_insert(e->env_pgdir, p, (void *) va_page_aligned, PTE_U | PTE_W);
+
+		if (ret < 0)
+			panic("region_alloc(): %e", ret);
+
+		va_page_aligned += PGSIZE;
+	}
+}
+
+
+
+/********************************************************************
+ * Set up the initial program binary, stack, and processor flags for 
+ * a user process.
+ * This function is ONLY called during the kernel iitialization,
+ * before running the first user-mode environment.
+ *
+ * This function loads all loadable segments from the ELF binary image
+ * into the environment's user memory, starting at the appropiate
+ * virtual address indicated in the ELF program header.
+ * At the same time it clears to zero any portions of these segments
+ * that are marked in the program header as being mapped but not 
+ * actually present in the ELF file - i.e., the program's bss section.
+ *
+ * Al this is very similar to what our boot loader does, except the boot
+ * loader also needs to read the code from disk. Take a look at
+ * boot/main.c to get ideas.
+ *
+ * Finally, this function maps one page for the program's initial stack.
+ * load_icode panics if it encounters problems.
+ *	- How might load_icode fail? 
+ ********************************************************************/
+
+static void
+load_icode(Env *e, uint8_t *binary)
+{
+	// Hints:
+	// Load each program segment into virtual memory
+	// at the address specified in the ELF section header.
+	// You should only load segments with ph->p_type == ELF_PROG_LOAD.
+	// Each segments's virtual address can be found in ph->p_va and 
+	// its size in memory can be found in ph->p_memsz.
+	// The ph->p_filesz bytes from the ELF binary, starting at
+	// 'binary + ph->p_offset', should be copied to virtual address
+	// ph->p_va. Any remaining memory bytes should be cleared to zero.
+	// (The ELF header should have ph->filesz <= ph->memsz.)
+	// User functions from the previous lad to allocate the map pages.
+	//
+	// All page protection bits should be user read/write for now.
+	// ELF segments are not necessarily page-aligned, but you can
+	// assume for this function that no two segments will touch
+	// the same virtual page.
+	//
+	// You may find a function like region_alloc useful.
+	// 
+	// Loading the segments is much simpler if you can move data
+	// directly into the virtual addresses stored in the ELF binary.
+	// So which page directory should be in force during this function?
+	//
+	// You much do something with the program's entry point,
+	// to make sure that the environment starts executing there.
+	// What? (see env_run() and env_pop_tf() below.)
+
+	Elf32_Ehdr *prog;
+	Elf32_Phdr *ph, *eph;
+
+	prog = (Elf32_Ehdr *) binary;
+
+	if (prog->e_magic != ELF_MAGIC)
+		panic("Elf magic number mismatch in load_icode().");
+
+	ph = (Elf32_Phdr *) ((uintptr_t)prog + prog->e_phoff);
+	eph = ph + prog->e_phnum;
+
+	// Switch to user program page directory
+	// Should not user kern_pgdir
+	lcr3(PADDR(e->env_pgdir));
+
+	for (; ph < eph; ph++) {
+		if (ph->p_filesz > ph->p_memsz)
+			panic("ELF header should have p_filesz <= p_memsz.");
+
+		if (ph->p_type == ELF_PROG_LOAD) {
+			region_alloc(e, (void *) ph->p_vaddr, ph->p_memsz);
+			memmove((void *) ph->p_vaddr, binary + ph->p_offset, ph->p_filesz);
+			memmove((void *) ph->p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
+		}
+	}
+
+	// Set up program's entry point in the Env,
+	e->env_tf.tf_eip = prog->e_entry;
+
+	// Now, map one page for the program's initial stack at 
+	// virtual address USTACKTOP - PGSIZE
+	region_alloc(e, (void *)(USTACKTOP - PGSIZE), PGSIZE);
+	
+	lcr3(PADDR(kern_pgdir));
+}
+
+/********************************************************************
+ * Allocates a new env with env_alloc, loads the named elf binary
+ * into it with load_icode, and sets its env_type. This function is
+ * ONLY called during kernel initialization, before running the first
+ * user-mode environment.
+ * The new env's parent ID is set to 0.
+ ********************************************************************/
+void
+env_create(uint8_t *binary, enum EnvType type)
+{
+	Env *env;
+	int ret = env_alloc(&env, 0);
+
+	if (ret < 0)
+		panic("Error in env_create(): ");
+
+	load_icode(env, binary);
+	env->env_type = type;	
 }
