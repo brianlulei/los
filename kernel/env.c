@@ -5,7 +5,9 @@
 #include <include/string.h>
 #include <include/memlayout.h>
 #include <include/elf.h>
+#include <include/trap.h>
 
+#include <kernel/monitor.h>
 #include <kernel/env.h>
 #include <kernel/pmap.h>
 
@@ -346,3 +348,124 @@ env_create(uint8_t *binary, enum EnvType type)
 	load_icode(env, binary);
 	env->env_type = type;	
 }
+
+/********************************************************************
+ * Free env e and all memory it uses
+ ********************************************************************/
+void
+env_free(Env *e)
+{
+	pte_t *pt;
+	uint32_t pdeno, pteno;
+	physaddr_t pa;
+
+	// If freeing the current environment, switch to kern_pgdir
+	// before freeing the page directory, just in case the page 
+	// get reused.
+	if (e == curenv)
+		lcr3(PADDR(kern_pgdir));
+
+	// Note the environment's demise
+	cprintf("[%08x] free env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
+
+	// Flush all mapped pages in the user portion of the address space
+	static_assert(UTOP % PGSIZE == 0);
+
+	for (pdeno = 0; pdeno < PDX(UTOP); pdeno++) {
+		// only look at mapped page tables
+		if (!(e->env_pgdir[pdeno] & PTE_P))
+			continue;
+
+		// find the pa and va of the page table
+		pa = PTE_ADDR(e->env_pgdir[pdeno]);
+		pt = (pte_t *) KADDR(pa);
+
+		// unmap all PTEs in this page table
+		for (pteno = 0; pteno < NPTENTRIES; pteno++) {
+			if (pt[pteno] & PTE_P)
+				page_remove(e->env_pgdir, PGADDR(pdeno, pteno, 0));
+		}
+
+		// free the page table itself
+		e->env_pgdir[pdeno] = 0;
+		page_decref(pa2page(pa));
+	}
+
+	// free the page directory
+	pa = PADDR(e->env_pgdir);
+	e->env_pgdir = 0;
+	page_decref(pa2page(pa));
+
+	// return the environment to the free list
+	e->env_status = ENV_FREE;
+	e->env_link = env_free_list;
+	env_free_list = e;
+}
+
+// Frees environment e.
+void
+env_destroy(Env *e)
+{
+	env_free(e);
+
+	cprintf("Destroyed the only environment - nothing more to do!\n");
+	while (1)
+		monitor(NULL);
+}
+
+/********************************************************************
+ * Restrores the register values in the Trapframe with the 'iret' instruction.
+ * This exits the kernel and starts executing some environment's code.
+ *
+ * This functin does not return.
+ ********************************************************************/
+void
+env_pop_tf(struct Trapframe *tf)
+{
+	__asm __volatile("movl %0, %%esp\n"
+		"\tpopal\n"
+		"\tpopl %%es\n"
+		"\tpopl %%ds\n"
+		"\taddl $0x8, %%esp\n"	/* skip tf_trapno and tf_errcode */
+		"\tiret"
+		: : "g" (tf) : "memory");
+
+	panic ("iret failed");	
+}
+
+
+/********************************************************************
+ * Context switch from curenv to env e.
+ * Note: if this is the first call to env_run, curenv is NULL.
+ ********************************************************************/
+void
+env_run(Env * e)
+{
+	// Step 1: If this is a context switch (a new environment is running):
+	//	1. Set the current environment (if any) back to
+	//	   ENV_RUNNABLE if it is ENV_RUNNING,
+	//  2. Set 'curenv' to the new environment,
+	//  3. Set its status to ENV_RUNNING,
+	//	4. Update its 'env_runs' counter,
+	//	5. User lcr3() to switch to its address space.
+	//
+	// Step 2: User env_pop_tf() to restore the environment's
+	//	registers and drop into user mode in the environement.
+
+	// Hint: This function loads the new environment's state from
+	// e->env_tf. Go back through the code above and make sure you
+	// have set the relevant parts of e->env_tf to sensible values.
+	
+	if (curenv && curenv != e) { /* This is a context switch */
+		if (curenv->env_status == ENV_RUNNING)
+			curenv->env_status = ENV_RUNNABLE;
+
+		curenv = e;
+		e->env_status = ENV_RUNNING;
+		e->env_runs++;
+		lcr3(PADDR(e->env_pgdir));
+	}
+
+	env_pop_tf(&(e->env_tf));
+}
+

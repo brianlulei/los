@@ -28,8 +28,8 @@
 // page table index
 #define PTX(la)		((((uintptr_t) (la)) >> PTXSHIFT) & 0x3FF)
 
-
-
+// construct linear address from indexes and offset
+#define PGADDR(d, t, o)	(void *) (((d) << PDXSHIFT) | ((t) << PTXSHIFT) | (o))
 
 /*
  *

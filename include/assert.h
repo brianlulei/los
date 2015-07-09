@@ -15,4 +15,14 @@ void _panic(const char *, int, const char *, ...) __attribute__((noreturn));
 #define assert(x)		\
 	do {if (!(x)) panic("assertion failed: %s", #x);} while(0)
 
+// static_assert(x) will generate a compile-time error if 'x' is false
+// It's well known that you can't have two case labels with the same constant. 
+// The following will not compile...
+// switch (0)
+// {
+// case 0:
+// case 0:;
+// }
+#define static_assert(x)	switch(x) case 0: case (x):
+
 #endif
