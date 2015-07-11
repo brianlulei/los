@@ -82,13 +82,13 @@ typedef struct {
 #define SEG_FAULT	(Segdesc) {0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0}
 
 // Normal segment
-#define SEG(type, base, lim, dpl)	(Segdesc)				\
+#define SEG(type, base, lim, dpl)	(Segdesc)						\
 { ((lim) >> 12) & 0xffff, (base) & 0xffff, ((base) >> 16) & 0xff,	\
-  type, 1, dpl, 1, (lim) >> 28, 0, 0, 1, 1,				\
+  type, 1, dpl, 1, (lim) >> 28, 0, 0, 1, 1,							\
   base >> 24 }	
 
 
-#define SEG16(type, base, lim, dpl)	(Segdesc)				\
+#define SEG16(type, base, lim, dpl)	(Segdesc)						\
 { (lim) & 0xffff, (base) & 0xffff, ((base) >> 16) & 0xff,			\
   type, 1, dpl, 1, (lim) >> 16, 0, 0, 1, 0,							\
   (base) >> 24 }
@@ -125,6 +125,20 @@ typedef struct Pseudodesc Pseudodesc;
 #define STA_R	0x02		// Readable (code segment)
 #define STA_A	0x01		// Accessed
 
+// System segment type bits
+#define STS_T16A    0x1     // Available 16-bit TSS
+#define STS_LDT     0x2     // Local Descriptor Table
+#define STS_T16B    0x3     // Busy 16-bit TSS
+#define STS_CG16    0x4     // 16-bit Call Gate
+#define STS_TG      0x5     // Task Gate / Coum Transmitions
+#define STS_IG16    0x6     // 16-bit Interrupt Gate
+#define STS_TG16    0x7     // 16-bit Trap Gate
+#define STS_T32A    0x9     // Available 32-bit TSS
+#define STS_T32B    0xB     // Busy 32-bit TSS
+#define STS_CG32    0xC     // 32-bit Call Gate
+#define STS_IG32    0xE     // 32-bit Interrupt Gate
+#define STS_TG32    0xF     // 32-bit Trap Gate
+
 // Control Register Flags
 #define CR0_PE	0x00000001	// Protection Enable
 #define CR0_MP	0x00000002	// Monitor coPorcessor
@@ -137,5 +151,72 @@ typedef struct Pseudodesc Pseudodesc;
 #define CR0_NW	0x20000000	// Not Writethrough
 #define CR0_CD	0x40000000	// Cache Disable
 #define CR0_PG	0x80000000	// Paging
+
+
+/*
+ * Part 3. Traps
+ *
+ */
+
+#ifndef __ASSEMBLER__
+
+// Task state segment format
+typedef struct Taskstate {
+	uint32_t	ts_link;	// Old ts selector
+	uintptr_t	ts_esp0;	// Stack pointers and segment selectors
+	uint16_t	ts_ss0;		// after an increase in privilege level
+	uint16_t	ts_padding1;
+	uintptr_t	ts_esp1;
+	uint16_t	ts_ss1;
+	uint16_t	ts_padding2;
+	uintptr_t	ts_esp2;
+	uint16_t	ts_ss2;
+	uint16_t	ts_padding3;
+	physaddr_t	ts_cr3;		// Page directory base
+	uintptr_t	ts_eip;		// Saved state from last task switch
+	uint32_t	ts_eflags;
+	uint32_t	ts_eax;		// More saved state (registers)
+	uint32_t	ts_ecx;
+	uint32_t	ts_edx;
+	uint32_t	ts_ebx;
+	uintptr_t	ts_esp;
+	uintptr_t	ts_ebp;
+	uint32_t	ts_esi;
+	uint32_t	ts_edi;
+	uint16_t	ts_es;
+	uint16_t	ts_padding4;
+	uint16_t	ts_cs;
+	uint16_t	ts_padding5;
+	uint16_t	ts_ss;
+	uint16_t	ts_padding6;
+	uint16_t	ts_ds;
+	uint16_t	ts_padding7;
+	uint16_t	ts_fs;
+	uint16_t	ts_padding8;
+	uint16_t	ts_gs;
+	uint16_t	ts_padding9;
+	uint16_t	ts_ldt;
+	uint16_t	ts_padding10;
+	uint16_t	ts_t;		// Trap on task switch
+	uint16_t	ts_iomb;	// I/O map base address
+} Taskstate;
+
+// Gate descriptor for interrupts and traps
+typedef struct Gatedesc{
+	unsigned	gd_off_15_0	: 16;	// low 16 bits of offset in segment
+	unsigned	gd_sel		: 16;	// segment selector
+	unsigned	gd_args		: 5;	// # args, 0 for interrupt/trap gates
+	unsigned	gd_rsv		: 3;	// reserved (should be zero)
+	unsigned	gd_type		: 4;	// type (STS_{TG, IG32, TG32})
+	unsigned	gd_s		: 1;	// must be 0 (system)
+	unsigned	gd_dpl		: 2;	// descriptor privilege level
+	unsigned	gd_p		: 1;	// present
+	unsigned	gd_off_31_16: 16;	// high bits of offset in segment
+} Gatedesc;
+
+
+
+
+#endif
 
 #endif

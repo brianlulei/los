@@ -5,6 +5,7 @@
 
 extern Env * envs;
 extern Env * curenv;
+extern Segdesc gdt[];
 
 void env_init(void);
 void env_init_percpu(void);

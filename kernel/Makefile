@@ -12,6 +12,7 @@ KERN_SRCFILES := kernel/entry.S \
 				 kernel/pmap.c \
 				 kernel/kclock.c \
 				 kernel/env.c \
+				 kernel/trap.c\
 				 lib/printfmt.c \
 				 lib/string.c \
 				 lib/assert.c \

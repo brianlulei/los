@@ -1,9 +1,11 @@
 #include <include/stdio.h>
 #include <include/string.h>
+
 #include <kernel/console.h>
 #include <kernel/monitor.h>
 #include <kernel/pmap.h>
 #include <kernel/env.h>
+#include <kernel/trap.h>
 
 // Test the stack backtrace function
 void
@@ -35,6 +37,9 @@ i386_init(void)
 
 	// User environment initialization functions
 	env_init();
+	
+	// TSS and interrupt initialization functions
+	trap_init();
 
 	cprintf("Success until here \n");
 
