@@ -3,6 +3,7 @@ OBJDIRS	+= kernel
 KERN_LDFLAGS	:= $(LDFLAGS) -nostdlib -T kernel/kernel.ld
 
 KERN_SRCFILES := kernel/entry.S \
+				 kernel/trapentry.S\
 				 kernel/entrypgdir.c \
 				 kernel/init.c \
 				 kernel/console.c \

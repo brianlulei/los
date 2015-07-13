@@ -1,6 +1,7 @@
 #include <include/mmu.h>
 #include <include/memlayout.h>
 #include <include/x86.h>
+#include <include/trap.h>
 
 #include <kernel/trap.h>
 #include <kernel/env.h>
@@ -38,4 +39,10 @@ trap_init_percpu(void)
 
 	// Load the TSS selector
 	ltr(GD_TSS0);
+}
+
+void
+trap(struct Trapframe *tf)
+{
+
 }
