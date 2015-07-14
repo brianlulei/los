@@ -12,6 +12,8 @@ static __inline void outw(int port, uint16_t data) __attribute__((always_inline)
 static __inline uint32_t rcr0(void) __attribute__((always_inline));
 static __inline void lcr0(uint32_t val) __attribute__((always_inline));
 
+static __inline uint32_t rcr2(void) __attribute__((always_inline));
+
 static __inline void lcr3(uint32_t val) __attribute__((always_inline));
 
 static __inline void lldt(uint16_t sel) __attribute__((always_inline));
@@ -20,6 +22,7 @@ static __inline void ltr(uint16_t sel) __attribute__((always_inline));
 
 static __inline void invlpg(void *addr) __attribute__((always_inline));
 
+static __inline uint32_t read_eflags(void) __attribute__((always_inline));
 
 static __inline uint8_t
 inb(int port)
@@ -79,6 +82,14 @@ lcr3(uint32_t val)
 	__asm __volatile("movl %0, %%cr3": : "r" (val));
 }
 
+static __inline uint32_t
+rcr2(void)
+{
+	uint32_t val;
+	__asm __volatile("movl %%cr2, %0" : "=r" (val));
+	return val;
+}
+
 static __inline void
 invlpg(void *addr)
 {
@@ -101,5 +112,13 @@ static __inline void
 ltr(uint16_t sel)
 {
 	__asm __volatile("ltr %0" : : "r" (sel));
+}
+
+static __inline uint32_t
+read_eflags(void)
+{
+	uint32_t eflags;
+	__asm __volatile("pushfl; popl %0" : "=r" (eflags));
+	return eflags;
 }
 #endif

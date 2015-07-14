@@ -31,6 +31,30 @@
 // construct linear address from indexes and offset
 #define PGADDR(d, t, o)	(void *) (((d) << PDXSHIFT) | ((t) << PTXSHIFT) | (o))
 
+// Eflags register
+#define FL_CF       0x00000001  // Carry Flag
+#define FL_PF       0x00000004  // Parity Flag
+#define FL_AF       0x00000010  // Auxiliary carry Flag
+#define FL_ZF       0x00000040  // Zero Flag
+#define FL_SF       0x00000080  // Sign Flag
+#define FL_TF       0x00000100  // Trap Flag
+#define FL_IF       0x00000200  // Interrupt Flag
+#define FL_DF       0x00000400  // Direction Flag
+#define FL_OF       0x00000800  // Overflow Flag
+#define FL_IOPL_MASK    0x00003000  // I/O Privilege Level bitmask
+#define FL_IOPL_0   0x00000000  //   IOPL == 0
+#define FL_IOPL_1   0x00001000  //   IOPL == 1
+#define FL_IOPL_2   0x00002000  //   IOPL == 2
+#define FL_IOPL_3   0x00003000  //   IOPL == 3
+#define FL_NT       0x00004000  // Nested Task
+#define FL_RF       0x00010000  // Resume Flag
+#define FL_VM       0x00020000  // Virtual 8086 mode
+#define FL_AC       0x00040000  // Alignment Check
+#define FL_VIF      0x00080000  // Virtual Interrupt Flag
+#define FL_VIP      0x00100000  // Virtual Interrupt Pending
+#define FL_ID       0x00200000  // ID flag
+
+
 /*
  *
  * Part 2. Segmentation data structures and constants
@@ -214,6 +238,46 @@ typedef struct Gatedesc{
 	unsigned	gd_off_31_16: 16;	// high bits of offset in segment
 } Gatedesc;
 
+// Set up a normal interrupt/trap gate descriptor.
+// - istrap: 1 for a trap (= exception) gate, 0 for an interrupt gate.
+    //   see section 9.6.1.3 of the i386 reference: "The difference between
+    //   an interrupt gate and a trap gate is in the effect on IF (the
+    //   interrupt-enable flag). An interrupt that vectors through an
+    //   interrupt gate resets IF, thereby preventing other interrupts from
+    //   interfering with the current interrupt handler. A subsequent IRET
+    //   instruction restores IF to the value in the EFLAGS image on the
+    //   stack. An interrupt through a trap gate does not change IF."
+// - sel: Code segment selector for interrupt/trap handler
+// - off: Offset in code segment for interrupt/trap handler
+// - dpl: Descriptor Privilege Level -
+//    the privilege level required for software to invoke
+//    this interrupt/trap gate explicitly using an int instruction.
+#define SETGATE(gate, istrap, sel, off, dpl)            \
+{                               \
+    (gate).gd_off_15_0 = (uint32_t) (off) & 0xffff;     \
+    (gate).gd_sel = (sel);                  \
+    (gate).gd_args = 0;                 \
+    (gate).gd_rsv = 0;                 \
+    (gate).gd_type = (istrap) ? STS_TG32 : STS_IG32;    \
+    (gate).gd_s = 0;                    \
+    (gate).gd_dpl = (dpl);                  \
+    (gate).gd_p = 1;                    \
+    (gate).gd_off_31_16 = (uint32_t) (off) >> 16;       \
+}
+
+// Set up a call gate descriptor.
+#define SETCALLGATE(gate, sel, off, dpl)                    \
+{                               \
+    (gate).gd_off_15_0 = (uint32_t) (off) & 0xffff;     \
+    (gate).gd_sel = (sel);                  \
+    (gate).gd_args = 0;                 \
+    (gate).gd_rsv1 = 0;                 \
+    (gate).gd_type = STS_CG32;              \
+    (gate).gd_s = 0;                    \
+    (gate).gd_dpl = (dpl);                  \
+    (gate).gd_p = 1;                    \
+    (gate).gd_off_31_16 = (uint32_t) (off) >> 16;       \
+}
 
 
 
