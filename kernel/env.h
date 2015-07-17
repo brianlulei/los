@@ -13,7 +13,7 @@ void	env_create(uint8_t *binary, enum EnvType type);
 void	env_free(Env *e);
 void	env_destroy(Env *e);
 
-int		env_run(Env *e) __attribute__((noreturn));
+void	env_run(Env *e) __attribute__((noreturn));
 void	env_pop_tf(struct Trapframe *tf) __attribute__((noreturn));
 // ENV_PASTE3 creates new token xyz.
 #define ENV_PASTE3(x, y, z)		x ## y ## z

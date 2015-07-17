@@ -22,9 +22,13 @@ KERN_SRCFILES := kernel/entry.S \
 # Only build files if they exist.
 # KERN_SRCFILES	:= $(wildcard $(KERN_SRCFILES))
 
+KERN_BINFILES := user/hello
+
 KERN_OBJFILES	:= $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
 KERN_OBJFILES	:= $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))
 KERN_OBJFILES	:= $(patsubst $(OBJDIR)/lib/%, $(OBJDIR)/kernel/%, $(KERN_OBJFILES))
+
+KERN_BINFILES := $(patsubst %, $(OBJDIR)/%, $(KERN_BINFILES))
 
 $(OBJDIR)/kernel/%.o: kernel/%.S
 	@echo + cc $<
@@ -42,7 +46,7 @@ $(OBJDIR)/kernel/%.o: lib/%.c
 	$(CC) -nostdinc $(KERN_CFLAGS) -c -o $@ $<
 
 # How to build the kernel itself
-$(OBJDIR)/kernel/kernel: $(KERN_OBJFILES) 
+$(OBJDIR)/kernel/kernel: $(KERN_OBJFILES) $(KERN_BINFILES) 
 	@echo + ld $@ $<
 	$(LD) -o $@ $(KERN_LDFLAGS) $(KERN_OBJFILES) $(GCC_LIB) -b binary $(KERN_BINFILES)
 	$(OBJDUMP) -S $@ > $@.asm

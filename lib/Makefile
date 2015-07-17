@@ -1,0 +1,25 @@
+OBJDIRS += lib
+
+LIB_SRCFILES := lib/assert.c \
+				lib/readline.c \
+				lib/string.c \
+				lib/printfmt.c \
+				lib/libmain.c \
+				lib/exit.c
+
+LIB_OBJFILES := $(patsubst lib/%.c, $(OBJDIR)/lib/%.o, $(LIB_SRCFILES))
+LIB_OBJFILES := $(patsubst lib/%.S, $(OBJDIR)/lib/%.o, $(LIB_OBJFILES))
+
+$(OBJDIR)/lib/%.o: lib/%.c
+	@echo + cc[USER] $<
+	@mkdir -p $(@D)
+	$(CC) -nostdinc $(USER_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/lib/%.o: lib/%.S
+	@echo + as[USER] $<
+	@mkdir -p $(@D)
+	$(CC) -nostdinc $(USER_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/lib/liblos.a: $(LIB_OBJFILES)
+	@echo + ar[USER] $@
+	$(AR) r $@ $(LIB_OBJFILES)

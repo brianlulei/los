@@ -19,8 +19,11 @@ CFLAGS	+= -Wall -Wno-format -Wno-unused -Werror -gstabs -m32
 CFLAGS	+= -fno-tree-ch
 CFLAGS	+= $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
-
+# Common linker flags
 LDFLAGS	:= -m elf_i386
+
+# Linker flags for user program
+ULDFLAGS := -T user/user.ld
 
 GCC_LIB	:= $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 
@@ -43,6 +46,8 @@ USER_CFLAGS	:= $(CFLAGS) -DLOS_USER -gstabs
 
 include boot/Makefile
 include kernel/Makefile
+include lib/Makefile
+include user/Makefile
 
 ifndef QEMU
 QEMU	:= $(shell if which qemu > /dev/null; \
