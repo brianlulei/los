@@ -6,6 +6,7 @@
 #include <include/stdio.h>
 #include <include/types.h>
 #include <include/string.h>
+#include <include/assert.h>
 
 // main user program
 void	umain(int argc, char **argv);
@@ -19,6 +20,10 @@ extern const volatile PageInfo pages[];
 // exit.c
 void	exit(void);
 
-
+//syscall.c
+void	sys_cputs(const char *string, size_t len);
+int		sys_cgetc(void);
+envid_t	sys_getenvid(void);
+int		sys_env_destroy(envid_t);
 
 #endif

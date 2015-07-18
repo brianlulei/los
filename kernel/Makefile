@@ -14,9 +14,9 @@ KERN_SRCFILES := kernel/entry.S \
 				 kernel/kclock.c \
 				 kernel/env.c \
 				 kernel/trap.c\
+				 kernel/assert.c \
 				 lib/printfmt.c \
 				 lib/string.c \
-				 lib/assert.c \
 				 lib/readline.c
 
 # Only build files if they exist.

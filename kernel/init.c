@@ -41,7 +41,7 @@ i386_init(void)
 	// TSS and interrupt initialization functions
 	trap_init();
 
-	ENV_CREATE(hello, ENV_TYPE_USER);
+	ENV_CREATE(user_hello, ENV_TYPE_USER);
 
 	//
 	env_run(&envs[0]);
