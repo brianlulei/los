@@ -315,7 +315,7 @@ load_icode(Env *e, uint8_t *binary)
 		if (ph->p_type == ELF_PROG_LOAD) {
 			region_alloc(e, (void *) ph->p_vaddr, ph->p_memsz);
 			memmove((void *) ph->p_vaddr, binary + ph->p_offset, ph->p_filesz);
-			memmove((void *) ph->p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
+			memset((void *) ph->p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
 		}
 	}
 
