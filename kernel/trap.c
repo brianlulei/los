@@ -15,13 +15,20 @@ static Taskstate ts;
  * additional information in the latter case. */
 static struct Trapframe *last_tf;
 
-extern uint32_t trap_handlers[];
-
 // Interrupt descriptor table. 
-Gatedesc idt[265] = { {0} };
+Gatedesc idt[256] = { {0} };
+
 Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
+
+typedef struct {
+	uint32_t	irq_id;
+	uintptr_t	handler;
+	uint32_t	priv_level;
+} irq_handler;
+
+extern irq_handler irq_handler_array[];
 
 static const char *trapname(int trapno)
 {
@@ -62,8 +69,10 @@ trap_init(void)
 {
 	uint16_t MAX_IDT_NUM = 19;
 	uint32_t i;
-	for (i = 0; i <= MAX_IDT_NUM; i++) {
-		SETGATE(idt[i], 0, GD_KT, trap_handlers[i], 0)
+	for (i = 0; irq_handler_array[i].irq_id != T_DEFAULT; i++) {
+		SETGATE(idt[irq_handler_array[i].irq_id], 0, GD_KT, 
+				irq_handler_array[i].handler,
+				irq_handler_array[i].priv_level);
 	}	
 	// Per-CPU setup
 	trap_init_percpu();
@@ -83,8 +92,11 @@ trap_init_percpu(void)
 							  sizeof(Taskstate) - 1, 0);
 	gdt[GD_TSS0 >> 3].sd_s = 0;
 
-	// Load the TSS selector
+	/*** Load the TSS selector ***/
 	ltr(GD_TSS0);
+
+	/*** Load the IDT ***/
+	lidt(&idt_pd);	
 }
 
 void

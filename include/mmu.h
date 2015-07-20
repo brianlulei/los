@@ -121,7 +121,7 @@ typedef struct {
 struct Pseudodesc {
 	uint16_t	pd_lim;		// Limit
 	uint32_t	pd_base;	// Base address
-} __attribute__((packed));
+} __attribute__ ((packed));
 
 typedef struct Pseudodesc Pseudodesc;
 #endif 
