@@ -74,7 +74,7 @@ env_init(void)
 	// Set up envs array
 	uint32_t i;
 	
-	for (i = NENV - 1; i > 0; i--) {
+	for (i = NENV - 1; i >= 0; i--) {
 		envs[i].env_id = 0;
 		envs[i].env_link = env_free_list;
 		env_free_list = &envs[i];
@@ -456,8 +456,8 @@ env_run(Env * e)
 	// e->env_tf. Go back through the code above and make sure you
 	// have set the relevant parts of e->env_tf to sensible values.
 	
-	if (curenv && curenv != e) { /* This is a context switch */
-		if (curenv->env_status == ENV_RUNNING)
+	if (curenv != e) { /* This is a context switch */
+		if (curenv && curenv->env_status == ENV_RUNNING)
 			curenv->env_status = ENV_RUNNABLE;
 
 		curenv = e;
@@ -466,6 +466,7 @@ env_run(Env * e)
 		lcr3(PADDR(e->env_pgdir));
 	}
 
-	env_pop_tf(&(e->env_tf));
+	env_pop_tf(&e->env_tf);
+	// sqitch to the same Env, do nothing ?
 }
 
