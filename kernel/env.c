@@ -59,7 +59,52 @@ Pseudodesc gdt_pd = {
 	sizeof(gdt) - 1, (unsigned long) gdt
 };
 
+/********************************************************************
+ * Converts an envid to an env pointer.
+ * If checkperm is set, the specified environment must be either the
+ * current environment or an immediate child of the current environment.
+ *
+ * RETURNS
+ *   0 on succes, -E_BAD_ENV on error.
+ *   On success, sets *env_store to the environment.
+ *   On error, sets *env_store to NULL. 
+ ********************************************************************/
+int
+envid2env(envid_t envid, Env **env_store, bool checkperm)
+{
+	Env *e;
 
+	// If envid is zero, return the current environment.
+	if (envid == 0) {
+		*env_store = curenv;
+		return 0;
+	}
+
+	// Look up the Env structure via the index part of the envid,
+	// then check the env_id field in that struct Env
+	// to envure that the envid is not stale
+	// (i.e.,  does not refer to a _previous_ environment
+	// that used the same slot in the envs[] array
+	e = &envs[ENVX(envid)];
+
+	if (e->env_status == ENV_FREE || e->env_id != envid) {
+		*env_store = 0;
+		return -E_BAD_ENV;
+	}
+
+	// Check that the calling environment has legitimate permission
+	// to manipulate the specified environment.
+	// If checkperm is set, the specified environment
+	// must be either the current environment
+	// or an immediate child of the current environment.
+	if (checkperm && e != curenv && e->env_parent_id != curenv->env_id) {
+		*env_store = 0;
+		return -E_BAD_ENV;
+	}
+
+	*env_store = e;
+	return 0;
+}
 
 /********************************************************************
  * Mark all environements in 'envs' as free, set their env_ids to 0,

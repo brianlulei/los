@@ -7,6 +7,8 @@
 
 #include <kernel/trap.h>
 #include <kernel/env.h>
+#include <kernel/syscall.h>
+#include <kernel/monitor.h>
 
 static Taskstate ts;
 
@@ -154,6 +156,23 @@ static void
 trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions
+	switch (tf->tf_trapno) {
+		case T_BRKPT: /* breakpoint */
+			monitor(tf);
+			return;
+		case T_PGFLT: /* page fault */
+			page_fault_handler(tf);
+			return;
+		case T_SYSCALL: /* system call */
+			tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax,
+										  tf->tf_regs.reg_edx,
+										  tf->tf_regs.reg_ecx,
+										  tf->tf_regs.reg_ebx,
+										  tf->tf_regs.reg_edi,
+										  tf->tf_regs.reg_esi);
+			return;
+
+	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
@@ -204,4 +223,25 @@ trap(struct Trapframe *tf)
 	// Return to the current environment, which should be running.
 	assert(curenv && curenv->env_status == ENV_RUNNING);
 	env_run(curenv);	
+}
+
+void
+page_fault_handler(struct Trapframe *tf)
+{
+	uint32_t fault_va;
+
+	// Read processor's CR2 register to find the faulting address
+	fault_va = rcr2();
+
+	/* Handle kernel-mode page faults. */
+
+	// We've already handled kernel-mode exceptions, so if we get there,
+	// the page fault happened in user mode.
+
+	// Destroy the environment that caused the fault.
+	cprintf("[%08x]	user fault va %08x ip %08x\n",
+			curenv->env_id, fault_va, tf->tf_eip);
+
+	//print_trapframe(tf);
+	env_destroy(curenv);	
 }
