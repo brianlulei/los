@@ -159,8 +159,8 @@ mem_init(void)
 	page_init();
 
 	check_page_free_list(1);
-	check_page_alloc();
-	check_page();
+	//check_page_alloc();
+	//check_page();
 
 	/***************** Now we set up virtual memory ******************/
 
@@ -202,7 +202,7 @@ mem_init(void)
 	boot_map_region(kern_pgdir, KERNBASE, 0x10000000, (physaddr_t)0x0, PTE_W);
 
 	// Check that the initial page directory has been set up correctly.
-	check_kern_pgdir();
+	// check_kern_pgdir();
 
 	/**********************************************************************
      * Switch from the minimal entry page directory to the full kern_pgdir
@@ -214,7 +214,7 @@ mem_init(void)
      * kern_pgdir wrong
 	 **********************************************************************/
 	lcr3(PADDR(kern_pgdir));
-	check_page_free_list(0);
+	// check_page_free_list(0);
 
 	// entry.S set the really import flags in cr0 (includeing enabling
 	// paging). Here we configure the rest of the flags that we care about.
@@ -224,8 +224,8 @@ mem_init(void)
 	cr0 &= ~(CR0_TS | CR0_EM);
 	lcr0(cr0);
 
-	//Some more checks, only possible after kern_pgdir is installed.
-	check_page_installed_pgdir();
+	// Some more checks, only possible after kern_pgdir is installed.
+	// check_page_installed_pgdir();
 }
 	
  
@@ -576,6 +576,23 @@ check_page_free_list(bool only_low_memory)
 
     if (!page_free_list)
         panic("'page_free_list' is a null pointer!");
+
+	/* This block shuffles the page_free_list based on PDX(page2pa(pp))
+	 * Divide the PageInfo pointer in page_free_list into
+	 * two sublists:
+	 * 1. PDX(page2pa(pp)) < pdx_limit
+	 * 2. PDX(page2pa(pp)) >= pdx_limit
+	 * relink page_free with sublist 1 then sublist 2
+	 *
+	 * This is needed especially for allocating page for page table
+	 * Since kern_pgdir does not map all pages, thus when allocating
+	 * a new page for a page table, this page should be in the area
+	 * that has already been mapped, otherwise, when any read/write to 
+	 * this page will fault, because it is not mapped.
+	 *
+	 * TODO: This is not a ideal solution, kernel should be able to setup all
+	 * page table mappings for kernel space during init phase.
+	 */
 
     if (only_low_memory) {
         // Move pages with lower addresses first in the free
