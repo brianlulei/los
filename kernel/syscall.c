@@ -32,7 +32,7 @@ sys_cgetc(void)
 static envid_t
 sys_getenvid(void)
 {
-	return ENVX(curenv->env_id);
+	return curenv->env_id;
 }
 
 // Destroy a given environment
