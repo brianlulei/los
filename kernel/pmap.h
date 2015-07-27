@@ -3,6 +3,7 @@
 #include <include/types.h>
 #include <include/assert.h>
 #include <include/memlayout.h>
+#include <include/env.h>
 
 extern char bootstacktop[], bootstack[];
 extern size_t		npages;
@@ -24,6 +25,7 @@ PageInfo *	page_lookup(pde_t *pgdir, void *va, pte_t **pte_store);
 void		tlb_invalidate(pde_t *pgdir, void *va);
 pte_t *		pgdir_walk(pde_t *pgdir, const void *va, int create);
 
+void		user_mem_assert(Env *env, const void *va, size_t len, int perm);
 
 
 /* This macro takes a kernel virtual address (above KERNBASE)

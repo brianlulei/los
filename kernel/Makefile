@@ -23,7 +23,9 @@ KERN_SRCFILES := kernel/entry.S \
 # Only build files if they exist.
 # KERN_SRCFILES	:= $(wildcard $(KERN_SRCFILES))
 
-KERN_BINFILES := user/hello
+KERN_BINFILES := user/hello \
+				 user/buggyhello \
+				 user/evilhello 
 
 KERN_OBJFILES	:= $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
 KERN_OBJFILES	:= $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))

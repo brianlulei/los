@@ -562,6 +562,74 @@ tlb_invalidate(pde_t *pgdir, void *va)
 	// For now, there is noly one address space, so always invalidate.
 	invlpg(va);
 }
+
+/*******************************************************************************
+ * Check that an environment is allowed to access the range of memory
+ * [va, va+len) with permissions 'perm | PTE_P'.
+ * Normally 'perm' will contain PTE_U at least, but this is not required.
+ * 'va' and 'len' need not be page-aligned; Must test every page that
+ * contains any of that range. E.g. need to test either 'len/PGSIZE',
+ * 'len/PGSIZE + 1', or 'len/PGSIZE + 2' pages.
+ *
+ * A user program can access a virtual address if (1) the address is below
+ * ULIM, and (2) the page table gives it permission. These are exactly the 
+ * tests you should implement here.
+ *
+ * If there is an error, set the 'user_mem_check_addr' variable to the first
+ * erroneous virtual address.
+ *
+ * Returns 0 if the user program can access this range of addresses,
+ * and -E_FAULT otherwise.
+ *******************************************************************************/
+static uintptr_t user_mem_check_addr;
+
+int
+user_mem_check(Env *env, const void *va, size_t len, int perm)
+{
+	uintptr_t uaddr = (uintptr_t) va;
+	const void *uaddr_aligned = ROUNDDOWN(va, PGSIZE);
+	pte_t * pt_entry;
+	perm |= PTE_P;
+
+	while (uaddr_aligned < va + len) {
+		if (uaddr >= ULIM) {
+			user_mem_check_addr = uaddr;
+			return -E_FAULT;
+		}
+
+		pt_entry = pgdir_walk(env->env_pgdir, uaddr_aligned, 0);
+
+		if (!pt_entry || (*pt_entry & perm) != perm) {
+			user_mem_check_addr = uaddr;
+			return -E_FAULT;
+		}
+
+		uaddr_aligned += PGSIZE;
+		uaddr = (uintptr_t) uaddr_aligned;
+	}
+	return 0;
+}
+
+/*******************************************************************************
+ * Checks that environment 'env' is allowed to access the range of memory [va, va+len)
+ * with permissions 'perm | PTE_U | PTE_P'.
+ * If it can, then the function simply returns.
+ * If it cannot, 'env' is destroyed and, if env is the current environment,
+ * this function will not return.
+ *******************************************************************************/
+
+void
+user_mem_assert(Env *env, const void *va, size_t len, int perm)
+{
+	if (user_mem_check(env, va, len, perm | PTE_U) < 0) {
+		cprintf("[%08x] user_mem_check assertion failure for "
+				"va %08x\n", env->env_id, user_mem_check_addr);
+		env_destroy(env);	// may not return;
+	}
+}
+
+
+
 // -----------------------------------------------------
 // Checking functions
 // -----------------------------------------------------

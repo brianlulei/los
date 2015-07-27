@@ -6,6 +6,7 @@
 
 #include <kernel/console.h>
 #include <kernel/env.h>
+#include <kernel/pmap.h>
 
 static void
 sys_cputs(const char *s, size_t len)
@@ -13,8 +14,7 @@ sys_cputs(const char *s, size_t len)
 	// Check that the user has permission to read memory [s, s+len).
 	// Destroy the environment if not.
 	
-	// LAB 3: Your code here.
-	//user_mem_assert(curenv, s, len, 0);
+	user_mem_assert(curenv, s, len, 0);
 
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
