@@ -6,6 +6,7 @@
 #include <kernel/pmap.h>
 #include <kernel/env.h>
 #include <kernel/trap.h>
+#include <kernel/cpu.h>
 
 // Test the stack backtrace function
 void
@@ -40,6 +41,10 @@ i386_init(void)
 	
 	// TSS and interrupt initialization functions
 	trap_init();
+
+	// Multiprocessor initalization functions
+	mp_init();
+	lapic_init();
 
 	ENV_CREATE(user_buggyhello, ENV_TYPE_USER);
 

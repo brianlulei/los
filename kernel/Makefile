@@ -16,6 +16,7 @@ KERN_SRCFILES := kernel/entry.S \
 				 kernel/trap.c\
 				 kernel/assert.c \
 				 kernel/syscall.c \
+				 kernel/mpconfig.c \
 				 lib/printfmt.c \
 				 lib/string.c \
 				 lib/readline.c
