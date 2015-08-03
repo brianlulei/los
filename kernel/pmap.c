@@ -564,6 +564,40 @@ tlb_invalidate(pde_t *pgdir, void *va)
 }
 
 /*******************************************************************************
+ * Reserve size bytes in the MMIO region and map [pa, pa+size) at this location.
+ * Return the base of the reserved region. Size does *not* have to be multiple of PGSIZE
+ *******************************************************************************/
+void *
+mmio_map_region(physaddr_t pa, size_t size)
+{
+	// Where to start the next region. Initially, this is the beginning of the
+	// MMIO region. Because this is static, its value will be preserved between
+	// calls to mmio_map_region (just like nextfree in boot_alloc)
+	static uintptr_t base = MMIOBASE;
+
+	// Reserve size bytes of virtual memory starting at base and map physical
+	// pages [pa, pa+size) to virtual address [base, base+size). Since this is
+	// device memory and not regular DRAM, you'll have to tell the CPU that it
+	// isn't safe to cache access to this memory. Luckily, the page tables provide
+	// bits for this purpose; simply create the mapping with PTE_PCD|PTE_PWT
+	// (cache-disable and write-through) in addition to PTE_W. (10.5 of IA32 volume 3A.)
+	//
+	// Be sure to round size up to a multiple of PGSIZE and to handle if this
+	// reservation would overflow MMIOLIM (simply panic).
+	void * ret = (void *)base;
+	size_t size_roundup = ROUNDUP(size, PGSIZE);
+	uintptr_t next_base = base + size_roundup;
+
+	if (next_base >= MMIOLIM)
+		panic("mmio_map_region base pointer overflow MMIOLIM.");
+
+	boot_map_region(kern_pgdir, base, size_roundup, pa, PTE_PCD | PTE_PWT | PTE_W);
+	base = next_base;
+	return ret;
+}
+
+
+/*******************************************************************************
  * Check that an environment is allowed to access the range of memory
  * [va, va+len) with permissions 'perm | PTE_P'.
  * Normally 'perm' will contain PTE_U at least, but this is not required.

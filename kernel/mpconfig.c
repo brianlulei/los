@@ -1,5 +1,7 @@
 #include <kernel/cpu.h>
 #include <kernel/pmap.h>
+#include <kernel/cpu.h>
+
 #include <include/string.h>
 #include <include/x86.h>
 

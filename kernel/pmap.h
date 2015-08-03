@@ -23,6 +23,7 @@ void		page_decref(PageInfo *pp);
 
 PageInfo *	page_lookup(pde_t *pgdir, void *va, pte_t **pte_store);
 void		tlb_invalidate(pde_t *pgdir, void *va);
+void *		mmio_map_region(physaddr_t pa, size_t size);
 pte_t *		pgdir_walk(pde_t *pgdir, const void *va, int create);
 
 void		user_mem_assert(Env *env, const void *va, size_t len, int perm);

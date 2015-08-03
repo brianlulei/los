@@ -24,8 +24,10 @@ typedef struct {
 } CpuInfo;
 
 // Initialized in mpconfig.c
-extern physaddr_t lapicaddr;	// Physical MIMO address of the local APIC
-
+extern CpuInfo		cpus[NCPU];
+extern int			ncpu;				// Total number of CPUs in the system
+extern CpuInfo		*bootcpu;			// The boot-strap processor (BSP)
+extern physaddr_t	lapicaddr;			// Physical MIMO address of the local APIC
 
 void mp_init(void);
 void lapic_init(void);
