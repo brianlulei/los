@@ -69,5 +69,49 @@ lapic_init(void)
 	// According to Intel MP Specification, the BIOS should initialize BSP's
 	// local APIC in Virtual Wire Mode, in which 8259A's INTR is virtually
 	// connected to BSP's LINTIN0. In this mode, do not need to program the IOAPIC.
-	//if (thiscpu != bootcpu)
+	if (thiscpu != bootcpu)
+		lapicw(LINT0, MASKED);
+
+	// Disable NMI (LINT1) on all CPUs
+	lapicw(LINT1, MASKED);
+
+	// Disable performance counter overflow interrupts
+	// on machines that provide that interrupt entry.
+	if (((lapic[VER] >> 16) & 0xFF) >= 4)
+		lapicw(PCINT, MASKED);
+
+	// Map error interrupt to IRQ_ERROR
+	lapicw(ERROR, IRQ_OFFSET + IRQ_ERROR);
+
+	// Clear error status register (requires back-to-back writes)
+	lapicw(ESR, 0);
+	lapicw(ESR, 0);
+
+	// Ack any outstanding interrupts.
+	lapicw(EOI, 0);
+
+	// Send an 'INIT' to all processors.
+	// Delivers an INIT request to the target processor or processors, which causes
+	// them to perform an INIT. As a result of this IPI message, all the target
+	// processors perform an INIT. The vector field must be programmed to '00H' for
+	// future compatibility.
+	lapicw(ICRHI, 0);
+	lapicw(ICRLO, BCAST | INIT | LEVEL);
+
+	// There is no IPI activity for this APIC, or the previous IPI sent from this
+	// local APIC was delivered and accepted by the target processor or processors.
+	while (lapic[ICRLO] & DELIVS)
+		;
+
+	// Enable interrupts on the APIC (but not on the processor).
+	lapicw(TPR, 0);
 }
+
+int
+cpunum(void)
+{
+	if (lapic)
+		return lapic[ID] >> 24;
+	return 0;
+}
+

@@ -7,6 +7,7 @@
 #include <kernel/env.h>
 #include <kernel/trap.h>
 #include <kernel/cpu.h>
+#include <kernel/picirq.h>
 
 // Test the stack backtrace function
 void
@@ -45,6 +46,8 @@ i386_init(void)
 	// Multiprocessor initalization functions
 	mp_init();
 	lapic_init();
+
+	pic_init();
 
 	ENV_CREATE(user_buggyhello, ENV_TYPE_USER);
 
