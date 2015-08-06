@@ -9,6 +9,7 @@
 #include <kernel/pmap.h>
 #include <kernel/kclock.h>
 #include <kernel/env.h>
+#include <kernel/cpu.h>
 
 // These variables are set by i386_detect_memory()
 size_t			npages;			// Amount of physical memory (in pages)
@@ -57,7 +58,7 @@ i386_detect_memory(void)
 // -------------------------------------
 // Set up memory mappings
 // -------------------------------------
-
+static void		mem_init_mp(void);
 static void		boot_map_region(pte_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm);
 static void		check_page_free_list(bool only_low_memory);
 static void		check_page_alloc(void);
@@ -201,6 +202,9 @@ mem_init(void)
 
 	boot_map_region(kern_pgdir, KERNBASE, 0x10000000, (physaddr_t)0x0, PTE_W);
 
+	// Initialize the SMP-related parts of the memory map
+	mem_init_mp();
+
 	// Check that the initial page directory has been set up correctly.
 	// check_kern_pgdir();
 
@@ -228,8 +232,38 @@ mem_init(void)
 	// check_page_installed_pgdir();
 }
 	
- 
 
+/*********************************************************************
+ * Modify mappings in kern_pgdir to support SMP
+ *	- Map the per-CPU stacks in the region [KSTACKTOP-PTSIZE, KSTACKTOP)
+ *********************************************************************/
+static void
+mem_init_mp(void)
+{
+	// Map per-CPU stacks starting at KSTACKTOP, for up to 'NCPU' CPUs.
+	//
+	// For CPU i, use the physical memory that 'percpu_kstacks[i]' referes
+	// to as its kernel stack. CPU i's kernel stack grows down from virtual
+	// address kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP), and is
+	// diveded into pieces, just like the single stack you set up in mem_init:
+	//
+	// * [kstacktop_i - KSTKSIZE, kstacktop_i)
+	//		-- backed by physical memory
+	// * [kstacktop_i - (KSTKSIZE + KSTKGAP), kstacktop_i - KSTKSIZE)
+	//		-- not backed; so if the kernel overflows its stack,
+	//		   it will fault rather than overwrite another CPU's stack.
+	//		   Known as a "guard page".
+	// Permissions: kernel RW, user NONE
+	int i;
+	uintptr_t kstacktop_i;
+
+	for (i = 0; i < NCPU; i++) {
+		kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+		boot_map_region(kern_pgdir, kstacktop_i - KSTKSIZE, KSTKSIZE, 
+						PADDR(&percpu_kstacks[i]), PTE_W);
+	}
+	
+}
 
 /*********************************************************************
  * Initialize page structure and memory free list.

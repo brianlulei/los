@@ -29,10 +29,14 @@ extern int			ncpu;				// Total number of CPUs in the system
 extern CpuInfo		*bootcpu;			// The boot-strap processor (BSP)
 extern physaddr_t	lapicaddr;			// Physical MIMO address of the local APIC
 
+// Per-CPU kernel stacks
+extern unsigned char percpu_kstacks[NCPU][KSTKSIZE];
+
 int cpunum(void);
 #define thiscpu (&cpus[cpunum()])
 
 void mp_init(void);
 void lapic_init(void);
+void lapic_startap(uint8_t apicid, uint32_t addr);
 
 #endif

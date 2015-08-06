@@ -10,6 +10,10 @@ CpuInfo *bootcpu;
 int ismp;
 int ncpu;
 
+// Per-CPU kernel stacks
+unsigned char percpu_kstacks[NCPU][KSTKSIZE]
+__attribute__ ((aligned(PGSIZE)));
+
 /* See MultiProcessor Specification Verstion 1.14 */
 
 struct mp {							// floating pointer

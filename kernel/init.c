@@ -54,3 +54,38 @@ i386_init(void)
 	//
 	env_run(&envs[0]);
 }
+
+/*************************************************************************
+ * While boot_aps is booting a given CPU, it communicates the per-core stack
+ * pointer that should be loaded by mpentry.S to that CPU in this variable.
+ *************************************************************************/
+void *mpentry_kstack;
+
+/* Start the non-boot (AP) processors */
+static void
+boot_aps(void)
+{
+	extern unsigned char mpentry_start[], mpentry_end[];
+	void *code;
+	CpuInfo *c;
+
+	// Write entry code to unused memory at MPENTRY_PADDR
+	code = KADDR(MPENTRY_PADDR);
+	memmove(code, mpentry_start, mpentry_end - mpentry_start);
+
+	// Boot each AP one at a time
+	for (c = cpus; c < cpus + ncpu; c++) {
+		if (c == cpus + cpunum())	// We've started already.
+			continue;
+
+		// Tell mpentry.S what stack to use
+		mpentry_kstack = percpu_kstacks[c - cpus] + KSTKSIZE;
+
+		// Start the CPU at mentry_start
+		lapic_startap(c->cpu_id, PADDR(code));
+
+		// Wait for the CPU to finish some basic setup in mp_main()
+		while (c->cpu_status != CPU_STARTED)
+			;
+	}
+}
