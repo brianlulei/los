@@ -19,6 +19,7 @@ KERN_SRCFILES := kernel/entry.S \
 				 kernel/mpconfig.c \
 				 kernel/lapic.c \
 				 kernel/picirq.c \
+				 kernel/mpentry.S \
 				 lib/printfmt.c \
 				 lib/string.c \
 				 lib/readline.c

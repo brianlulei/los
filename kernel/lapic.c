@@ -1,6 +1,8 @@
 #include <kernel/cpu.h>
 #include <kernel/pmap.h>
 
+#include <include/x86.h>
+
 // Local APIC registers, divided by 4 for use as uint32_t[] indices.
 #define ID      (0x0020/4)   // ID
 #define VER     (0x0030/4)   // Version
@@ -115,3 +117,51 @@ cpunum(void)
 	return 0;
 }
 
+// Spin for a given number of microseconds.
+// On real hardware would want to tune this dynamically
+static void
+microdelay(int us)
+{
+}
+
+/* Start additional processor running entry code at addr
+ * See Appendix B of MultiProcessor Specification.
+ */
+
+#define IO_RTC 0x70
+
+void
+lapic_startap(uint8_t apicid, uint32_t addr)
+{
+	int i;
+	uint16_t *wrv;
+	/* The BSP must initialize BIOS shutdown code to 0AH and the
+	 * warm reset vector (DWORD based at 40:67) to point to the AP
+	 * startup code prior to executing the [universal startup algo]
+	 */
+	outb(IO_RTC, 0xF);								// offset 0xF is shutdown code
+	outb(IO_RTC + 1, 0x0A);
+	wrv = (uint16_t *) KADDR((0x40 << 4 | 0x67));	// Warm reset vector
+	wrv[0] = 0;
+	wrv[1] = addr >> 4;
+
+	/* "Universal startup algorithm"
+	 * BSP sends AP an INIT IPI (level-triggered) to reset other CPU.
+	 */
+	lapicw(ICRHI, apicid << 24);
+	lapicw(ICRLO, INIT | LEVEL | ASSERT);
+	microdelay(200);
+	lapicw(ICRLO, INIT | LEVEL);
+	microdelay(100);
+
+	/* Send startup IPI (twice) to enter code.
+	 * Regular hardware is supposed to only accept a STARTUP
+	 * when it is in the halted state due to an INIT. So the second
+	 * should be ignored, but it is part of the official Intel algorithm.
+	 */
+	for (i = 0; i < 2; i++) {
+		lapicw(ICRHI, apicid << 24);
+		lapicw(ICRLO, STARTUP | (addr >> 12));
+		microdelay(200);
+	}
+}

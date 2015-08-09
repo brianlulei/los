@@ -9,6 +9,8 @@
 #include <kernel/cpu.h>
 #include <kernel/picirq.h>
 
+static void boot_aps(void);
+
 // Test the stack backtrace function
 void
 test_backtrace(int x)
@@ -49,6 +51,11 @@ i386_init(void)
 
 	pic_init();
 
+	// Acquire the big kernel lock before waking up APs
+
+	// Starting non-boot CPUs
+	boot_aps();
+
 	ENV_CREATE(user_buggyhello, ENV_TYPE_USER);
 
 	//
@@ -88,4 +95,20 @@ boot_aps(void)
 		while (c->cpu_status != CPU_STARTED)
 			;
 	}
+}
+
+/* Setup code for APs */
+void
+mp_main(void)
+{
+	// We are in high EIP now, safe to switch to kern_pgdir
+	lcr3(PADDR(kern_pgdir));
+	cprintf("SMP: CPU %d starting\n", cpunum());
+
+	lapic_init();
+	env_init_percpu();
+	trap_init_percpu();
+	xchg(&thiscpu->cpu_status, CPU_STARTED);	// tell boot_aps() we're up
+
+	for (;;);	
 }
