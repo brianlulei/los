@@ -218,7 +218,7 @@ mem_init(void)
      * kern_pgdir wrong
 	 **********************************************************************/
 	lcr3(PADDR(kern_pgdir));
-	// check_page_free_list(0);
+	check_page_free_list(0);
 
 	// entry.S set the really import flags in cr0 (includeing enabling
 	// paging). Here we configure the rest of the flags that we care about.
@@ -298,10 +298,17 @@ page_init(void)
 	
 	// 2. Mark [PGSIZE, npages_basemem * PGSIZE) free.
 	// i is starting from 1
+	uint32_t mpentry_page_num = PGNUM(ROUNDUP(MPENTRY_PADDR, PGSIZE));
     for (i = 1; i < npages_basemem; i++) {
-        pages[i].pp_ref = 0;
-        pages[i].pp_link = page_free_list;
-        page_free_list = &pages[i];
+		// Mark [MPENTRY, MPENTRY + 4k) as in use.
+		if (i == mpentry_page_num) {
+			pages[i].pp_ref = 0;
+			pages[i].pp_link = NULL;
+		} else {
+			pages[i].pp_ref = 0;
+			pages[i].pp_link = page_free_list;
+			page_free_list = &pages[i];
+		}
     }
 
 	// 3. Mark [IOPHYSMEM, EXTPHYSMEM) in use.
@@ -765,6 +772,7 @@ check_page_free_list(bool only_low_memory)
         assert(page2pa(pp) != EXTPHYSMEM);
 		//cprintf("addr = %p, fist_free_page = %p\n", page2kva(pp), first_free_page);
         assert(page2pa(pp) < EXTPHYSMEM || (char *) page2kva(pp) >= first_free_page);
+		assert(page2pa(pp) != MPENTRY_PADDR);
 
         if (page2pa(pp) < EXTPHYSMEM)
             ++nfree_basemem;

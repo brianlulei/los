@@ -110,5 +110,10 @@ mp_main(void)
 	trap_init_percpu();
 	xchg(&thiscpu->cpu_status, CPU_STARTED);	// tell boot_aps() we're up
 
+	/* Now that we have finished some basic setup, call sched_yield()
+	 * to start running processes on this CPU. But make sure that 
+	 * only one CPU can enter the schedule at a time !
+	 */
+
 	for (;;);	
 }

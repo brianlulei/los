@@ -223,7 +223,7 @@ mp_init(void)
 		return;
 	}
 
-	cprintf("SMP: CPU %d found %d CPU(s)", bootcpu->cpu_id, ncpu);
+	cprintf("SMP: CPU %d found %d CPU(s)\n", bootcpu->cpu_id, ncpu);
 
 	if (mp->imcrp) {
 		// If the hardware implements PIC mode,

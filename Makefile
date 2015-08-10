@@ -57,9 +57,12 @@ QEMU	:= $(shell if which qemu > /dev/null; \
 				   fi;)
 endif
 
+CPUS ?= 4
+
 IMAGES	:= $(OBJDIR)/kernel/kernel.img
 GDBPORT := $(shell expr `id -u` % 5000 + 25000)
-QEMUOPTS:= -hda $(OBJDIR)/kernel/kernel.img -gdb tcp::$(GDBPORT)
+QEMUOPTS = -hda $(OBJDIR)/kernel/kernel.img -gdb tcp::$(GDBPORT)
+QEMUOPTS += -smp $(CPUS)
 
 pre-qemu: .gdbinit
 
