@@ -206,7 +206,7 @@ mem_init(void)
 	mem_init_mp();
 
 	// Check that the initial page directory has been set up correctly.
-	// check_kern_pgdir();
+	check_kern_pgdir();
 
 	/**********************************************************************
      * Switch from the minimal entry page directory to the full kern_pgdir
@@ -885,9 +885,14 @@ check_kern_pgdir(void)
         assert(check_va2pa(pgdir, KERNBASE + i) == i); 
 
     // check kernel stack
-    for (i = 0; i < KSTKSIZE; i += PGSIZE)
-        assert(check_va2pa(pgdir, KSTACKTOP - KSTKSIZE + i) == PADDR(bootstack) + i); 
-    assert(check_va2pa(pgdir, KSTACKTOP - PTSIZE) == ~0);
+    for (n = 0; n < NCPU; n++) {
+        uint32_t base = KSTACKTOP - (KSTKSIZE + KSTKGAP) * (n + 1);
+        for (i = 0; i < KSTKSIZE; i += PGSIZE)
+            assert(check_va2pa(pgdir, base + KSTKGAP + i) 
+                == PADDR(percpu_kstacks[n]) + i);
+        for (i = 0; i < KSTKGAP; i += PGSIZE)
+            assert(check_va2pa(pgdir, base + i) == ~0); 
+    }
 
     // check PDE permissions
     for (i = 0; i < NPDENTRIES; i++) {
