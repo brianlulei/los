@@ -10,6 +10,7 @@
 #include <kernel/monitor.h>
 #include <kernel/env.h>
 #include <kernel/pmap.h>
+#include <kernel/cpu.h>
 
 Env *envs	= NULL;					// All environments
 Env *curenv	= NULL;					// Current env
@@ -34,7 +35,8 @@ static Env * env_free_list = NULL;	// Free environment list
  * of that descriptor: 0 for kernel and 3 for user.
  ********************************************************************/
 
-Segdesc gdt[] = 
+/* Change gdt size to NCPU + 5 */
+Segdesc gdt[NCPU + 5] = 
 {
 	// 0x0 - unused (always faluts -- for trapping NULL far pointers)
 	SEG_NULL,
