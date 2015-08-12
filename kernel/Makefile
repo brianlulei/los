@@ -21,6 +21,7 @@ KERN_SRCFILES := kernel/entry.S \
 				 kernel/picirq.c \
 				 kernel/mpentry.S \
 				 kernel/spinlock.c \
+				 kernel/sched.c \
 				 lib/printfmt.c \
 				 lib/string.c \
 				 lib/readline.c
