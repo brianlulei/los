@@ -10,6 +10,8 @@
 #include <kernel/syscall.h>
 #include <kernel/monitor.h>
 #include <kernel/cpu.h>
+#include <kernel/spinlock.h>
+#include <kernel/sched.h>
 
 static Taskstate ts;
 
@@ -218,6 +220,16 @@ trap(struct Trapframe *tf)
 	// of GCC rely on DF being clear
 	asm volatile("cld" : : : "cc");
 
+	// Halt the CPU if some other CPU has caleed panic()
+	extern char *panicstr;
+	if (panicstr)
+		asm volatile ("hlt");
+
+	// Re-acquire the big kernel lock if we were halted in
+	// sched_yield()
+	if (xchg(&thiscpu->cpu_status, CPU_STARTED) == CPU_HALTED)
+		lock_kernel();
+
 	// Check that interrupts are disabled. If this assertion
 	// fails, DO NOT be tempted to fix it by inserting a "cli"
 	// in the interrupt path.
@@ -227,7 +239,17 @@ trap(struct Trapframe *tf)
 
 	if ((tf->tf_cs & 3) == 3) {
 		// Trapped from user land
+		// Acquire the big kernel lock before doing any serious
+		// kernel work.
 		assert(curenv);
+		lock_kernel();
+
+		// Garbage collect if current environment is a zombie
+		if (curenv->env_status == ENV_DYING) {
+			env_free(curenv);
+			curenv = NULL;
+			sched_yield();
+		}
 
 		// Copy from frame (which is currently on the stack)
 		// into 'curenv->env_tf', so that running the environment
@@ -245,9 +267,11 @@ trap(struct Trapframe *tf)
 	// Dispatch based on what type of trap occurred
 	trap_dispatch(tf);
 
-	// Return to the current environment, which should be running.
-	assert(curenv && curenv->env_status == ENV_RUNNING);
-	env_run(curenv);	
+	// If we 
+	if (curenv && curenv->env_status == ENV_RUNNING)
+		env_run(curenv);
+	else
+		sched_yield();
 }
 
 void

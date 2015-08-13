@@ -8,6 +8,8 @@
 #include <kernel/trap.h>
 #include <kernel/cpu.h>
 #include <kernel/picirq.h>
+#include <kernel/spinlock.h>
+#include <kernel/sched.h>
 
 static void boot_aps(void);
 
@@ -52,14 +54,15 @@ i386_init(void)
 	pic_init();
 
 	// Acquire the big kernel lock before waking up APs
+	lock_kernel();
 
 	// Starting non-boot CPUs
 	boot_aps();
 
-	ENV_CREATE(user_buggyhello, ENV_TYPE_USER);
+	ENV_CREATE(user_hello, ENV_TYPE_USER);
 
-	//
-	env_run(&envs[0]);
+	// Schedule and run the first user environment
+	sched_yield();
 }
 
 /*************************************************************************
@@ -114,6 +117,6 @@ mp_main(void)
 	 * to start running processes on this CPU. But make sure that 
 	 * only one CPU can enter the schedule at a time !
 	 */
-
-	for (;;);	
+	lock_kernel();
+	sched_yield();
 }

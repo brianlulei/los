@@ -11,6 +11,7 @@
 #include <kernel/env.h>
 #include <kernel/pmap.h>
 #include <kernel/cpu.h>
+#include <kernel/spinlock.h>
 
 Env *envs	= NULL;					// All environments
 Env *curenv	= NULL;					// Current env
@@ -512,6 +513,9 @@ env_run(Env * e)
 		e->env_runs++;
 		lcr3(PADDR(e->env_pgdir));
 	}
+
+	// Release the lock right before switching to user mode
+	unlock_kernel();
 
 	env_pop_tf(&e->env_tf);
 	// sqitch to the same Env, do nothing ?
