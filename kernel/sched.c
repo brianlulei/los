@@ -39,7 +39,8 @@ sched_yield(void)
 
 	next_id = (cur_id + 1) % NENV;
 
-	while (next_id != cur_id) {
+	int i;
+	for (i = 0; i < NENV; i++) {
 		if (envs[next_id].env_status == ENV_RUNNABLE) {
 			idle = &envs[next_id];
 			break;
