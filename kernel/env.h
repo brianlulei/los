@@ -2,10 +2,11 @@
 #define _KERNEL_ENV_H
 
 #include <include/env.h>
+#include <kernel/cpu.h>
 
-extern Env * envs;
-extern Env * curenv;
+extern Env * envs;					// All environements
 extern Segdesc gdt[];
+#define curenv	(thiscpu->cpu_env)	// Current environment
 
 void	env_init(void);
 void	env_init_percpu(void);

@@ -14,7 +14,6 @@
 #include <kernel/spinlock.h>
 
 Env *envs	= NULL;					// All environments
-Env *curenv	= NULL;					// Current env
 static Env * env_free_list = NULL;	// Free environment list
 									// (linked by Env->env_link)
 
