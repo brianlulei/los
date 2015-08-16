@@ -28,6 +28,9 @@
 // page table index
 #define PTX(la)		((((uintptr_t) (la)) >> PTXSHIFT) & 0x3FF)
 
+// offset in page
+#define PGOFF(la)	(((uintptr_t) (la)) & 0xFF)
+
 // construct linear address from indexes and offset
 #define PGADDR(d, t, o)	(void *) (((d) << PDXSHIFT) | ((t) << PTXSHIFT) | (o))
 
@@ -128,18 +131,26 @@ typedef struct Pseudodesc Pseudodesc;
 
 
 // Page table/directory entry flags
-#define PTE_P	0x001		// Present
-#define PTE_W	0x002		// Writeable
-#define PTE_U	0x004		// User
-#define PTE_PWT	0x008		// Write-Through
-#define PTE_PCD	0x010		// Cache-Disable
-#define PTE_A	0x020		// Accessed
-#define PTE_D	0x040		// Dirty
-#define PTE_PS	0x080		// Page Size
-#define PTR_G	0x100		// Global
+#define PTE_P		0x001		// Present
+#define PTE_W		0x002		// Writeable
+#define PTE_U		0x004		// User
+#define PTE_PWT		0x008		// Write-Through
+#define PTE_PCD		0x010		// Cache-Disable
+#define PTE_A		0x020		// Accessed
+#define PTE_D		0x040		// Dirty
+#define PTE_PS		0x080		// Page Size
+#define PTR_G		0x100		// Global
+
+// The PTE_AVAIL bits aren't used by the kernel or interpreted by the
+// hardware, so user proceses are allowed to set them arbitrarily.
+#define PTE_AVAIL	0xE00		// Available for software use
+
+// Flags in PTE_SYSCALL may be used in system calls.
+#define PTE_SYSCALL	(PTE_AVAIL | PTE_P | PTE_W | PTE_U)
 
 // Adress in page table or page directory entry
 #define PTE_ADDR(pte) ((physaddr_t) (pte) & ~0xFFF)
+
 
 // Descriptor Type Bits
 #define STA_X	0x08		// Executable (code) segment 

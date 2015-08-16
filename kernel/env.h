@@ -10,6 +10,7 @@ extern Segdesc gdt[];
 
 void	env_init(void);
 void	env_init_percpu(void);
+int		env_alloc(Env **newenv_store, envid_t parent_id);
 void	env_create(uint8_t *binary, enum EnvType type);
 void	env_free(Env *e);
 void	env_destroy(Env *e);
