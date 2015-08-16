@@ -31,7 +31,8 @@ KERN_SRCFILES := kernel/entry.S \
 
 KERN_BINFILES := user/hello \
 				 user/buggyhello \
-				 user/evilhello 
+				 user/evilhello \
+				 user/dumbfork 
 
 KERN_OBJFILES	:= $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
 KERN_OBJFILES	:= $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))

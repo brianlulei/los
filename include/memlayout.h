@@ -66,6 +66,9 @@
 // Where user programs generally begin
 #define UTEXT		(2*PTSIZE)
 
+// Used for temporary page mappings.  Typed 'void*' for convenience
+#define UTEMP		((void*) PTSIZE)
+
 // Physical address of startup code for non-boot CPUs (APs)
 #define MPENTRY_PADDR   0x7000
 

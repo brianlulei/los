@@ -12,6 +12,7 @@
 #include <kernel/pmap.h>
 #include <kernel/cpu.h>
 #include <kernel/spinlock.h>
+#include <kernel/sched.h>
 
 Env *envs	= NULL;					// All environments
 static Env * env_free_list = NULL;	// Free environment list
@@ -449,15 +450,27 @@ env_free(Env *e)
 	env_free_list = e;
 }
 
-// Frees environment e.
+/* Frees environment e.
+ * If e was the current env, then runs a new environment (and does not
+ * return to the caller).
+ */
 void
 env_destroy(Env *e)
 {
+	// If e is currently running on other CPUs, we change its stage to
+	// ENV_DYING. A zombie environment will be freed the next time it
+	// traps to the kernel.
+	if (e->env_status == ENV_RUNNING && curenv != e) {
+		e->env_status = ENV_DYING;
+		return;
+	}
+
 	env_free(e);
 
-	cprintf("Destroyed the only environment - nothing more to do!\n");
-	while (1)
-		monitor(NULL);
+	if (curenv == e) {
+		curenv = NULL;
+		sched_yield();
+	}
 }
 
 /********************************************************************

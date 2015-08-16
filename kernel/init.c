@@ -59,6 +59,9 @@ i386_init(void)
 	// Starting non-boot CPUs
 	boot_aps();
 
+	//ENV_CREATE(user_dumbfork, ENV_TYPE_USER);
+	ENV_CREATE(user_hello, ENV_TYPE_USER);
+	ENV_CREATE(user_hello, ENV_TYPE_USER);
 	ENV_CREATE(user_hello, ENV_TYPE_USER);
 
 	// Schedule and run the first user environment
