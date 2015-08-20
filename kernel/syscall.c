@@ -139,7 +139,14 @@ sys_env_set_status(envid_t envid, int status)
 static int
 sys_env_set_pgfault_upcall(envid_t envid, void *func)
 {
-	panic("sys_env_set_pgfault_upcall not implemented");
+	Env *env;
+	int ret = envid2env(envid, &env, 1);
+
+	if (ret < 0)
+		return -E_BAD_ENV;
+
+	env->env_pgfault_upcall = func;
+	return 0;
 }
 
 /* Allocate a page of memory and map it at 'va' with permission
@@ -381,6 +388,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 										   (envid_t)a3, (void *)a4, (int)a5);
 		case SYS_page_unmap:
 			return (uint32_t) sys_page_unmap((envid_t)a1, (void *)a2);
+		case SYS_env_set_pgfault_upcall:
+			return (uint32_t) sys_env_set_pgfault_upcall((envid_t)a1, (void*)a2);
 		default:
 			return -E_NO_SYS;
     }

@@ -184,21 +184,26 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions
 	switch (tf->tf_trapno) {
-		case T_BRKPT: /* breakpoint */
-			monitor(tf);
-			return;
-		case T_PGFLT: /* page fault */
-			page_fault_handler(tf);
-			return;
-		case T_SYSCALL: /* system call */
-			tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax,
-										  tf->tf_regs.reg_edx,
-										  tf->tf_regs.reg_ecx,
-										  tf->tf_regs.reg_ebx,
-										  tf->tf_regs.reg_edi,
-										  tf->tf_regs.reg_esi);
-			return;
-
+	case T_BRKPT: /* breakpoint */
+		monitor(tf);
+		return;
+	case T_PGFLT: /* page fault */
+		page_fault_handler(tf);
+		return;
+	case T_SYSCALL: /* system call */
+		tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax,
+									  tf->tf_regs.reg_edx,
+									  tf->tf_regs.reg_ecx,
+									  tf->tf_regs.reg_ebx,
+									  tf->tf_regs.reg_edi,
+									  tf->tf_regs.reg_esi);
+		return;
+	case IRQ_OFFSET + IRQ_SPURIOUS: /* spurious interrupts */
+		// The hardware sometimes raises these because of noise on the
+		// IRQ line or other reasons. We don't care.
+		cprintf("Sprious interrupt on irq 7\n");
+		print_trapframe(tf);
+		return;
 	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
@@ -289,6 +294,38 @@ page_fault_handler(struct Trapframe *tf)
 
 	// We've already handled kernel-mode exceptions, so if we get there,
 	// the page fault happened in user mode.
+
+	// Call the envirionment's page fault upcall, if one exists.
+	// Set up a page fault stack frame on the user exception stack
+	// (below UXSTACKTOP), then branch to curenv->env_pgfault_upcall.
+	//
+	// The page fault upcall might cause another page fault, in which case
+	// we branch to the page fault upcall recursively, pushing another 
+	// page fault stack frame on top of the user exception stack.
+	//
+	// The trap handler needs one word of scratch space at the top of the
+	// trap-time stack in order to return. In the non-recursive case, we
+	// don't have to worry about this because the top of the regular user
+	// stack is free. In the recursive case, this means we have to leave
+	// an extra word between the current top of the exception stack and
+	// the new stack frame because the exception stack is the trap-time stack.
+	//
+	// If there's no page fault upcall, the environment didn't allocate a
+	// page for its execution stack or can't write to it, or the execution
+	// stack overflows, then destroy the environment that caused the fault.
+	// Note that need to first check for the page fault upcall and print
+	// the "user fault va" message below if there is none.
+	// The remainning three checks can be combined into a single test.
+	//
+	// Hints:
+	//	user_mem_assert() and env_run() are useful here.
+	//	To change what the user environment runs, modify 'curenv->env_tf'
+	//	(the 'tf' variable points at 'curenv->env_tf').
+
+	if (curenv->env_pgfault_upcall) {
+		
+
+	}
 
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x]	user fault va %08x ip %08x\n",
