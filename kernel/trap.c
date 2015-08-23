@@ -4,6 +4,7 @@
 #include <include/trap.h>
 #include <include/stdio.h>
 #include <include/assert.h>
+#include <include/trap.h>
 
 #include <kernel/trap.h>
 #include <kernel/env.h>
@@ -12,6 +13,7 @@
 #include <kernel/cpu.h>
 #include <kernel/spinlock.h>
 #include <kernel/sched.h>
+#include <kernel/pmap.h>
 
 static Taskstate ts;
 
@@ -323,8 +325,27 @@ page_fault_handler(struct Trapframe *tf)
 	//	(the 'tf' variable points at 'curenv->env_tf').
 
 	if (curenv->env_pgfault_upcall) {
-		
+		struct UTrapframe *utf;
+		if (tf->tf_esp >= (uintptr_t) (UXSTACKTOP - PGSIZE)
+			&& tf->tf_esp < (uintptr_t) UXSTACKTOP) {
+			utf = (struct UTrapframe *) (tf->tf_esp - 4 - sizeof(struct UTrapframe));
+		} else {
+			utf = (struct UTrapframe *) UXSTACKTOP - 1;
+		}
 
+		user_mem_assert(curenv, utf, sizeof(struct UTrapframe), PTE_U | PTE_W | PTE_P);
+		
+		utf->utf_esp = tf->tf_esp;
+		utf->utf_eflags = tf->tf_eflags;
+		utf->utf_eip = tf->tf_eip;
+		utf->utf_regs = tf->tf_regs;
+		utf->utf_err = tf->tf_err;
+		utf->utf_fault_va = fault_va;
+
+		// at trap(), if in user mode, tf = &curenv->env_tf;
+		tf->tf_esp = (uintptr_t) utf;
+		tf->tf_eip = (uintptr_t) curenv->env_pgfault_upcall;
+		env_run(curenv);
 	}
 
 	// Destroy the environment that caused the fault.
