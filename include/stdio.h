@@ -14,6 +14,9 @@ int		getchar(void);
 int		cprintf(const char *fmt, ...);
 int		vcprintf(const char *fmt, va_list);
 
+int		snprintf(char *str, int size, const char *fmt, ...);
+int		vsnprintf(char *str, int size, const char *fmt, va_list);
+
 /* lib/printfmt.c */
 void	vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list);		
 

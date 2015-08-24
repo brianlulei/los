@@ -32,6 +32,10 @@ KERN_SRCFILES := kernel/entry.S \
 KERN_BINFILES := user/hello \
 				 user/buggyhello \
 				 user/evilhello \
+				 user/faultread \
+				 user/faultdie \
+				 user/faultalloc \
+				 user/faultallocbad \
 				 user/dumbfork 
 
 KERN_OBJFILES	:= $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))

@@ -36,7 +36,7 @@ _pgfault_upcall:
 	// Call the C page fault handler
 	pushl	%esp					// function argument: pointer to UTF
 	movl	_pgfault_handler, %eax
-	call	*%eax
+	call	*%eax					// page fault is handled by calling handler
 	addl	$4, %esp				// pop function argument
 
 	// Now the C page fault handler has returned and you must return
@@ -62,13 +62,30 @@ _pgfault_upcall:
 	// may find that you have to re-arrange your code in non-obvious
 	// ways as registers become unavailable as scratch space.
 
+	// trap_time_esp (on exception stack) = trap_time_esp - 4, 
+	// for inserting trap_time_eip used for 'ret' instruction to return.
+	movl	0x30(%esp), %eax
+	subl	$0x4, %eax
+	movl	%eax, 0x30(%esp)
+
+	// Insert eip on user's stack to serve as 'Return Address'
+	movl	0x28(%esp), %ebx
+	movl	%ebx, (%eax)
+
 	// Restore the trap-time registers. After you do this, you can
 	// no longer modify any general-purpose registers.
+	addl	$0x8, %esp
+	popal
 
 	// Restore eflags from the stack. After you do this, you can
 	// no longer use arithmetic operations or anything else that 
 	// modifies eflags.
+	addl	$0x4, %esp
+	popfl
 
 	// Switch back to the adjusted trap-time stack.
+	popl %esp
 
 	// Return to re-execute the instruction that falted.
+	ret
+

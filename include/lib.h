@@ -21,6 +21,9 @@ extern const volatile PageInfo pages[];
 // exit.c
 void	exit(void);
 
+// pgfault.c
+void    set_pgfault_handler(void (*handler)(struct UTrapframe *utf));
+
 //syscall.c	
 void			sys_cputs(const char *string, size_t len);
 int				sys_cgetc(void);
@@ -34,6 +37,9 @@ int				sys_page_alloc(envid_t env, void *va, int perm);
 int				sys_page_map(envid_t src_env, void *src_pg,
 							 envid_t dst_env, void *dst_pg, int perm);
 int				sys_page_unmap(envid_t env, void *pg);
+
+int				sys_env_set_pgfault_upcall(envid_t env, void *upcall);
+
 
 // This must be inlined.
 static __inline envid_t __attribute__((always_inline))

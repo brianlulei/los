@@ -8,7 +8,8 @@ LIB_SRCFILES := lib/readline.c \
 				lib/syscall.c \
 				lib/panic.c \
 				lib/exit.c \
-				lib/pfentry.S
+				lib/pfentry.S \
+				lib/pgfault.c
 
 LIB_OBJFILES := $(patsubst lib/%.c, $(OBJDIR)/lib/%.o, $(LIB_SRCFILES))
 LIB_OBJFILES := $(patsubst lib/%.S, $(OBJDIR)/lib/%.o, $(LIB_OBJFILES))
