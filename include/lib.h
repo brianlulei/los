@@ -54,4 +54,10 @@ sys_exofork(void)
 	return ret;
 }
 
+// fork.c
+#define PTE_SHARE		0x400
+envid_t fork(void);
+envid_t sfork(void);
+
+
 #endif

@@ -69,6 +69,10 @@
 // Used for temporary page mappings.  Typed 'void*' for convenience
 #define UTEMP		((void*) PTSIZE)
 
+// Used for temporary page mappings for the user page-fault handler
+// (should not conflict with other temporary page mappings)
+#define PFTEMP      (UTEMP + PTSIZE - PGSIZE)
+
 // Physical address of startup code for non-boot CPUs (APs)
 #define MPENTRY_PADDR   0x7000
 
@@ -78,6 +82,26 @@
 
 typedef uint32_t	pte_t;
 typedef uint32_t	pde_t;
+
+
+#if LOS_USER
+/*
+ * The page directory entry corresponding to the virtual address range
+ * [UVPT, UVPT + PTSIZE) points to the page directory itself.  Thus, the page
+ * directory is treated as a page table as well as a page directory.
+ *
+ * One result of treating the page directory as a page table is that all PTEs
+ * can be accessed through a "virtual page table" at virtual address UVPT (to
+ * which uvpt is set in lib/entry.S).  The PTE for page number N is stored in
+ * uvpt[N].  (It's worth drawing a diagram of this!)
+ *
+ * A second consequence is that the contents of the current page directory
+ * will always be available at virtual address (UVPT + (UVPT >> PGSHIFT)), to
+ * which uvpd is set in lib/entry.S.
+ */
+extern volatile pte_t uvpt[];     // VA of "virtual page table"
+extern volatile pde_t uvpd[];     // VA of current page directory
+#endif
 
 
 /*
