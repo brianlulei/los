@@ -123,12 +123,13 @@ fork(void)
 	}
 
 	// We're the parent.
-	for (va = UTEXT ; va < USTACKTOP; va += PGSIZE){
+	for (va = UTEXT; va < USTACKTOP; va += PGSIZE){
 		if ((uvpd[PDX(va)] & PTE_P) && 
 			(uvpt[PGNUM(va)] & PTE_P) && 
 			(uvpt[PGNUM(va)] & PTE_U))
+		{
 			duppage(envid, PGNUM(va));
-
+		}
 		// For pages that are not PTE_W or PTE_COW, ignore it.
 	}
 
