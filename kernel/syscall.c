@@ -379,6 +379,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 			return sys_env_destroy(a1);			
 		case SYS_exofork:
 			return (int32_t) sys_exofork();
+		case SYS_yield:
+			sys_yield();
 		case SYS_env_set_status:
 			return (int32_t) sys_env_set_status((envid_t) a1, a2);
 		case SYS_page_alloc: 

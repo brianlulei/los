@@ -119,6 +119,7 @@ fork(void)
 		// Child process
 		// Fix 'thisenv'
 		thisenv = &envs[ENVX(sys_getenvid())];
+		cprintf("envid = %d\n", thisenv->env_id);
 		return 0;
 	}
 

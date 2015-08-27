@@ -18,7 +18,7 @@ forkchild(const char *cur, char branch)
     if (fork() == 0) {
         forktree(nxt);
         exit();
-    }   
+    } 
 }
 
 void
