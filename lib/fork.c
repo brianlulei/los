@@ -25,6 +25,7 @@ pgfault(struct UTrapframe *utf)
 	if (!((err & FEC_WR) && (pte & PTE_COW)))
 		panic("pgfault : pagefault %08x not (FEC_WR and PTE_COW).\n", err);
 
+	//cprintf("envid = %d, fault addr = %08x, eip = %08x\n", thisenv->env_id, addr, utf->utf_eip);
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
 	// page to the old page's address.
@@ -67,18 +68,28 @@ duppage(envid_t envid, unsigned pn)
     pte_t pte = uvpt[pn];
     void *va = (void *)(pn << PGSHIFT);
 
+	int perm = pte & PTE_SYSCALL;
     // If the page is writable or copy-on-write,
     // the mapping must be copy-on-write ,
     // otherwise the new environment could change this page.
     if ((pte & PTE_W) || (pte & PTE_COW)) {
-        if (sys_page_map(0, va, envid, va, PTE_COW | PTE_U | PTE_P))
+		perm &= ~PTE_W;
+		perm |= PTE_COW;
+
+		//cprintf("va = %08x, pte = 0x%08x", va, pte);
+        if (sys_page_map(0, va, envid, va, perm))
             panic("duppage: map cow error");
         
+		//pte = uvpt[pn];
+		//cprintf(", PTE = 0x%08x", pte);
         // Change permission of the page in this environment to copy-on-write.
         // Otherwise the new environment would see the change in this environment.
-        if (sys_page_map(0, va, 0, va, PTE_COW | PTE_U | PTE_P))
+        if (sys_page_map(0, va, 0, va, perm))
             panic("duppage: change perm error");
-    } else if (sys_page_map(0, va, envid, va, PTE_U | PTE_P))
+		//pte = uvpt[pn];
+		//cprintf(", PTE = 0x%08x\n", pte);
+		cprintf("trigger pgfault\n");
+    } else if (sys_page_map(0, va, envid, va, perm))
         panic("duppage: map ro error");
 
 	return 0;
@@ -124,6 +135,7 @@ fork(void)
 	}
 
 	// We're the parent.
+	cprintf("thiseid = %d, envid = %d\n", thisenv->env_id, envid);
 	for (va = UTEXT; va < USTACKTOP; va += PGSIZE){
 		if ((uvpd[PDX(va)] & PTE_P) && 
 			(uvpt[PGNUM(va)] & PTE_P) && 

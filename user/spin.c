@@ -8,15 +8,12 @@ umain(int argc, char **argv)
 {
     envid_t env;
 
-    cprintf("I am the parent.  Forking the child...\n");
+    cprintf("edi = %d, I am the parent 1 .  Forking the child...\n", thisenv->env_id);
     if ((env = fork()) == 0) {
         cprintf("I am the child.  Spinning...\n");
-		cprintf("envid 1 = %d\n", thisenv->env_id);
     }   
 
-	cprintf("envid 2 = %d\n", thisenv->env_id);
-    cprintf("I am the parent.  Running the child...\n");
+    cprintf("eid = %d, I am the parent 2 .  Running the child...\n", thisenv->env_id);
 	sys_yield();
-	cprintf("envid 3 = %d\n", thisenv->env_id);
-    cprintf("I am the parent.  Killing the child...\n");
+    cprintf("eid = %d, I am the parent 3 .  Killing the child...\n", thisenv->env_id);
 }
