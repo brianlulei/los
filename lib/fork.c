@@ -76,19 +76,13 @@ duppage(envid_t envid, unsigned pn)
 		perm &= ~PTE_W;
 		perm |= PTE_COW;
 
-		//cprintf("va = %08x, pte = 0x%08x", va, pte);
         if (sys_page_map(0, va, envid, va, perm))
             panic("duppage: map cow error");
         
-		//pte = uvpt[pn];
-		//cprintf(", PTE = 0x%08x", pte);
         // Change permission of the page in this environment to copy-on-write.
         // Otherwise the new environment would see the change in this environment.
         if (sys_page_map(0, va, 0, va, perm))
             panic("duppage: change perm error");
-		//pte = uvpt[pn];
-		//cprintf(", PTE = 0x%08x\n", pte);
-		cprintf("trigger pgfault\n");
     } else if (sys_page_map(0, va, envid, va, perm))
         panic("duppage: map ro error");
 
@@ -130,12 +124,10 @@ fork(void)
 		// Child process
 		// Fix 'thisenv'
 		thisenv = &envs[ENVX(sys_getenvid())];
-		cprintf("envid = %d\n", thisenv->env_id);
 		return 0;
 	}
 
 	// We're the parent.
-	cprintf("thiseid = %d, envid = %d\n", thisenv->env_id, envid);
 	for (va = UTEXT; va < USTACKTOP; va += PGSIZE){
 		if ((uvpd[PDX(va)] & PTE_P) && 
 			(uvpt[PGNUM(va)] & PTE_P) && 

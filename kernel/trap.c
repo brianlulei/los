@@ -184,7 +184,6 @@ print_regs(struct PushRegs *regs)
 static void
 trap_dispatch(struct Trapframe *tf)
 {
-	cprintf("trap # = %d\n", tf->tf_trapno);
 	// Handle processor exceptions
 	switch (tf->tf_trapno) {
 	case T_BRKPT: /* breakpoint */
@@ -295,8 +294,6 @@ page_fault_handler(struct Trapframe *tf)
 		panic("[%08x] kern fault va %08x ip %08x\n", curenv->env_id,
 				fault_va, tf->tf_eip);
 
-	cprintf("[%08x] fault va %08x ip %08x\n", curenv->env_id,
-				fault_va, tf->tf_eip);
 	// We've already handled kernel-mode exceptions, so if we get there,
 	// the page fault happened in user mode.
 

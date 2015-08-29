@@ -8,6 +8,9 @@ static __inline void insl(int port, void *addr, int cnt) __attribute__((always_i
 
 static __inline void outb(int port, uint8_t data) __attribute__((always_inline));
 static __inline void outw(int port, uint16_t data) __attribute__((always_inline));
+static __inline uint32_t read_ebp(void) __attribute__((always_inline));
+static __inline uint32_t read_esp(void) __attribute__((always_inline));
+
 
 static __inline uint32_t rcr0(void) __attribute__((always_inline));
 static __inline void lcr0(uint32_t val) __attribute__((always_inline));
@@ -62,6 +65,13 @@ read_ebp(void)
 	return ebp;
 }
 
+static __inline uint32_t
+read_esp(void)
+{
+	uint32_t esp;
+	__asm __volatile("movl %%esp, %0" : "=r" (esp));
+	return esp;
+}
 
 static __inline void 
 lcr0(uint32_t val) 

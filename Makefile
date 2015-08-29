@@ -61,12 +61,12 @@ CPUS ?= 1
 
 IMAGES	:= $(OBJDIR)/kernel/kernel.img
 GDBPORT := $(shell expr `id -u` % 5000 + 25000)
-QEMUOPTS = -hda $(OBJDIR)/kernel/kernel.img -gdb tcp::$(GDBPORT)
+QEMUOPTS = -hda $(OBJDIR)/kernel/kernel.img -serial mon:stdio -gdb tcp::$(GDBPORT)
 QEMUOPTS += -smp $(CPUS)
 
 pre-qemu: .gdbinit
 
-.gdbinit: .gdbinit.template
+.gdbinit: .gdbinit.templ
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 
 qemu: $(IMAGES)

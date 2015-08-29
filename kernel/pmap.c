@@ -525,9 +525,9 @@ page_insert(pde_t *pgdir, PageInfo *pp, void *va, int perm)
 		pp->pp_ref ++;
 	} else if (PTE_ADDR(*pt_entry) != pa) {
 		page_remove(pgdir, va);
-		tlb_invalidate(pgdir, va);
 		pp->pp_ref ++;
 	}
+	tlb_invalidate(pgdir, va);
 	*pt_entry = pa | perm | PTE_P;
 	return 0;
 }
