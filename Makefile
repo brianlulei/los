@@ -57,7 +57,7 @@ QEMU	:= $(shell if which qemu > /dev/null; \
 				   fi;)
 endif
 
-CPUS ?= 1 
+CPUS ?= 2 
 
 IMAGES	:= $(OBJDIR)/kernel/kernel.img
 GDBPORT := $(shell expr `id -u` % 5000 + 25000)

@@ -38,5 +38,6 @@ int cpunum(void);
 void mp_init(void);
 void lapic_init(void);
 void lapic_startap(uint8_t apicid, uint32_t addr);
+void lapic_eoi(void);
 
 #endif

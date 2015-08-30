@@ -200,6 +200,11 @@ trap_dispatch(struct Trapframe *tf)
 									  tf->tf_regs.reg_edi,
 									  tf->tf_regs.reg_esi);
 		return;
+	case IRQ_OFFSET + IRQ_TIMER: /* handle clock interrupts. */
+		// Don't forget to ack the interrupt using lapic_eoi()
+		// before call the scheduler.
+		lapic_eoi();
+		sched_yield();
 	case IRQ_OFFSET + IRQ_SPURIOUS: /* spurious interrupts */
 		// The hardware sometimes raises these because of noise on the
 		// IRQ line or other reasons. We don't care.

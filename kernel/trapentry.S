@@ -55,6 +55,7 @@
 
 irq_handler_array:
 
+/* Exceptions (0-31) */
 TRAPHANDLER_NOEC(irq_handler_divide, T_DIVIDE, 0);
 TRAPHANDLER_NOEC(irq_handler_debug, T_DEBUG, 0);
 TRAPHANDLER_NOEC(irq_handler_nmi, T_NMI, 0);
@@ -64,16 +65,40 @@ TRAPHANDLER_NOEC(irq_handler_bound, T_BOUND, 0);
 TRAPHANDLER_NOEC(irq_handler_illop, T_ILLOP, 0);
 TRAPHANDLER_NOEC(irq_handler_device, T_DEVICE, 0);
 TRAPHANDLER(irq_handler_dblflt, T_DBLFLT, 0);
+// idt 9 reserved
 TRAPHANDLER(irq_handler_tss, T_TSS, 0);
 TRAPHANDLER(irq_handler_segnp, T_SEGNP, 0);
 TRAPHANDLER(irq_handler_stack, T_STACK, 0);
 TRAPHANDLER(irq_handler_gpflt, T_GPFLT, 0);
 TRAPHANDLER(irq_handler_pgflt, T_PGFLT, 0);
+// idt 15 reserved
 TRAPHANDLER_NOEC(irq_handler_fperr, T_FPERR, 0);
 TRAPHANDLER(irq_handler_align, T_ALIGN, 0);
 TRAPHANDLER_NOEC(irq_handler_mchk, T_MCHK, 0);
 TRAPHANDLER_NOEC(irq_handler_simderr, T_SIMDERR, 0);
+
+/* System call */
 TRAPHANDLER_NOEC(irq_handler_syscall, T_SYSCALL, 3);
+
+/* Hardware IRQ (0-15)*/
+TRAPHANDLER_NOEC(idt_irq0, IRQ_OFFSET + 0, 0);
+TRAPHANDLER_NOEC(idt_irq1, IRQ_OFFSET + 1, 0);
+TRAPHANDLER_NOEC(idt_irq2, IRQ_OFFSET + 2, 0);
+TRAPHANDLER_NOEC(idt_irq3, IRQ_OFFSET + 3, 0);
+TRAPHANDLER_NOEC(idt_irq4, IRQ_OFFSET + 4, 0);
+TRAPHANDLER_NOEC(idt_irq5, IRQ_OFFSET + 5, 0);
+TRAPHANDLER_NOEC(idt_irq6, IRQ_OFFSET + 6, 0);
+TRAPHANDLER_NOEC(idt_irq7, IRQ_OFFSET + 7, 0);
+TRAPHANDLER_NOEC(idt_irq8, IRQ_OFFSET + 8, 0);
+TRAPHANDLER_NOEC(idt_irq9, IRQ_OFFSET + 9, 0);
+TRAPHANDLER_NOEC(idt_irq10, IRQ_OFFSET + 10, 0);
+TRAPHANDLER_NOEC(idt_irq11, IRQ_OFFSET + 11, 0);
+TRAPHANDLER_NOEC(idt_irq12, IRQ_OFFSET + 12, 0);
+TRAPHANDLER_NOEC(idt_irq13, IRQ_OFFSET + 13, 0);
+TRAPHANDLER_NOEC(idt_irq14, IRQ_OFFSET + 14, 0);
+TRAPHANDLER_NOEC(idt_irq15, IRQ_OFFSET + 15, 0);
+
+/* Default handler */
 TRAPHANDLER_NOEC(irq_handler_default, T_DEFAULT, 0);
 
 /*

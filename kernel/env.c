@@ -247,6 +247,12 @@ env_alloc(Env **newenv_store, envid_t parent_id)
 	e->env_tf.tf_cs = GD_UT | 3; 
 	// set e->env_tf.tf_eip later
 
+	// Enable interrupts while in user mode.
+	e->env_tf.tf_eflags |= FL_IF;
+
+	// Clear the page fault hadnler until user installs one.
+	e->env_pgfault_upcall = 0;
+
 	// Commit the allocation
 	env_free_list = e->env_link;
 	*newenv_store = e;
