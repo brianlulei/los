@@ -10,7 +10,8 @@ LIB_SRCFILES := lib/readline.c \
 				lib/exit.c \
 				lib/pfentry.S \
 				lib/pgfault.c \
-				lib/fork.c
+				lib/fork.c \
+				lib/ipc.c
 
 LIB_OBJFILES := $(patsubst lib/%.c, $(OBJDIR)/lib/%.o, $(LIB_SRCFILES))
 LIB_OBJFILES := $(patsubst lib/%.S, $(OBJDIR)/lib/%.o, $(LIB_OBJFILES))

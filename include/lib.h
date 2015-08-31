@@ -8,6 +8,7 @@
 #include <include/string.h>
 #include <include/assert.h>
 #include <include/syscall.h>
+#include <include/error.h>
 
 // main user program
 void	umain(int argc, char **argv);
@@ -40,6 +41,8 @@ int				sys_page_unmap(envid_t env, void *pg);
 
 int				sys_env_set_pgfault_upcall(envid_t env, void *upcall);
 
+int				sys_ipc_try_send(envid_t to_env, uint32_t value, void *pg, int perm);
+int				sys_ipc_recv(void *rcv_pg);
 
 // This must be inlined.
 static __inline envid_t __attribute__((always_inline))
@@ -53,6 +56,11 @@ sys_exofork(void)
 	);
 	return ret;
 }
+
+// ipc.c
+void		ipc_send(envid_t to_env, uint32_t value, void *pg, int perm);
+int32_t		ipc_recv(envid_t *from_env_store, void *pg, int *perm_store);
+envid_t		ipc_find_env(enum EnvType type);
 
 // fork.c
 #define PTE_SHARE		0x400

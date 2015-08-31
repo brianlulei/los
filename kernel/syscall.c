@@ -339,7 +339,60 @@ sys_page_unmap(envid_t envid, void *va)
 static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
-	panic("sys_ipc_try_send not implemented");
+	int ret;
+	Env *dstenv;
+	PageInfo *pp;
+	pte_t *pte;
+
+	// check parameters
+	// check envid and env status
+	ret = envid2env(envid, &dstenv, 0);
+
+	if (ret < 0)
+		return -E_BAD_ENV;
+
+	if (!dstenv->env_ipc_recving)
+		return -E_IPC_NOT_RECV;
+
+	// Check srcva and perm
+	if ((uintptr_t)srcva < UTOP) {
+		if (PGOFF(srcva) != 0)
+			return -E_INVAL;
+
+		if ((perm & (PTE_U | PTE_P)) != (PTE_U | PTE_P))
+			return -E_INVAL;
+
+		if (((perm | PTE_SYSCALL) != PTE_SYSCALL))
+			return -E_INVAL;
+
+		// Check physical page exist
+		pp = page_lookup(curenv->env_pgdir, srcva, &pte);
+
+		if ((uintptr_t)srcva < UTOP && !pp)
+			return -E_INVAL;
+
+		// Check perm write conflict
+		if ((perm & PTE_W) && !(*pte & PTE_W))
+			return -E_INVAL;
+
+		// Send mapping
+		if ((uintptr_t) dstenv->env_ipc_dstva < UTOP) {
+			// Do page map
+			ret = page_insert(dstenv->env_pgdir, pp, dstenv->env_ipc_dstva, perm);
+
+			if (ret < 0)
+				return -E_NO_MEM;
+			// Make page perm
+			dstenv->env_ipc_perm = perm;
+		}
+    }
+	// If srcva >= UTOP, no mapping transfered and no errors.
+	dstenv->env_ipc_recving = false;
+	dstenv->env_ipc_value = value;
+	dstenv->env_ipc_from = curenv->env_id;
+	dstenv->env_status = ENV_RUNNABLE;
+
+	return 0;
 }
 
 /* Block until a value is ready. Record that you want to receive
@@ -357,7 +410,24 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 static int
 sys_ipc_recv(void *dstva)
 {
-	panic("sys_ipc_recv not implemented");
+	// check dstva
+	if ((uintptr_t)dstva < UTOP) {
+		if (PGOFF(dstva) != 0)
+			return -E_INVAL;
+
+		curenv->env_ipc_dstva = dstva;
+	} else {
+		curenv->env_ipc_dstva = (void *)UTOP;
+	}
+
+	// Record this env want to receive
+	curenv->env_ipc_recving = true;
+	curenv->env_ipc_dstva = dstva;
+
+	// Block this env, and giveup CPU
+	curenv->env_status = ENV_NOT_RUNNABLE;
+
+	return 0;
 }
 
 /* Dispatches to the correct kernel function, passing the arguments. */
@@ -392,6 +462,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 			return (uint32_t) sys_page_unmap((envid_t)a1, (void *)a2);
 		case SYS_env_set_pgfault_upcall:
 			return (uint32_t) sys_env_set_pgfault_upcall((envid_t)a1, (void*)a2);
+		case SYS_ipc_try_send:
+			return (uint32_t) sys_ipc_try_send((envid_t) a1, a2, (void *) a3, a4);
+		case SYS_ipc_recv:
+			return (uint32_t) sys_ipc_recv((void *) a1);
 		default:
 			return -E_NO_SYS;
     }

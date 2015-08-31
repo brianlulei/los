@@ -38,7 +38,8 @@ KERN_BINFILES := user/hello \
 				 user/faultallocbad \
 				 user/dumbfork \
 				 user/forktree \
-				 user/spin
+				 user/spin \
+				 user/primes
 
 KERN_OBJFILES	:= $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
 KERN_OBJFILES	:= $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))
