@@ -9,6 +9,10 @@ OBJDUMP := objdump
 OBJCOPY := objcopy
 NM	:= nm
 
+# Native commands
+NCC := gcc -pipe
+NATIVE_CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -I$(TOP) -MD -Wall
+
 # Compiler flags
 # -fno-builtin is required to avoid refs to undefined functions in the kernel.
 # Only optimize to -o1
@@ -48,6 +52,7 @@ include boot/Makefile
 include kernel/Makefile
 include lib/Makefile
 include user/Makefile
+include fs/Makefile
 
 ifndef QEMU
 QEMU	:= $(shell if which qemu > /dev/null; \
