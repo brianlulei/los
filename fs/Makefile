@@ -1,15 +1,17 @@
 OBJDIRS += fs
 
-FSOFILES := $(OBJDIR)/fs/serv.o
+FSOFILES := $(OBJDIR)/fs/serv.o \
+			$(OBJDIR)/fs/fs.o \
+			$(OBJDIR)/fs/ide.o \
 
 USERAPPS :=	$(OBJDIR)/user/init
 
 FSIMGTXTFILES :=	fs/newmotd
 
-$(OBJDIR)/fs/%.o: fs/%.c fs/%.h include/lib.h
+$(OBJDIR)/fs/%.o: fs/%.c
 	@echo + cc[USER] $<
 	@mkdir -p $(@D)
-	$(CC) -nostdinc $(USER_FLAGS) -c -o $@ $<
+	$(CC) -nostdinc $(USER_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/fs/fs: $(FSOFILES) $(OBJDIR)/lib/entry.o $(OBJDIR)/lib/liblos.a user/user.ld
 	@echo + ld $@
