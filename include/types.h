@@ -31,6 +31,16 @@ typedef int32_t				intptr_t;
 typedef uint32_t			uintptr_t;
 typedef uint32_t			physaddr_t;
 
+// size_t is used for memory object sizes
+typedef uint32_t			size_t;
+
+// ssize_t is a signed version of ssize_t, used in case there might be an
+// error return.
+typedef int32_t				ssize_t;
+
+// off_t is used for file offsets and lengths.
+typedef int32_t				off_t;
+
 // Round up to the nearest multiple of n
 // typeof declares y with the type of what x points to.
 #define ROUNDDOWN(a, n)					\

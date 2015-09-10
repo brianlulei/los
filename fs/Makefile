@@ -3,6 +3,8 @@ OBJDIRS += fs
 FSOFILES := $(OBJDIR)/fs/serv.o \
 			$(OBJDIR)/fs/fs.o \
 			$(OBJDIR)/fs/ide.o \
+			$(OBJDIR)/fs/bc.o \
+			
 
 USERAPPS :=	$(OBJDIR)/user/init
 

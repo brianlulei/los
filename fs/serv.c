@@ -3,8 +3,10 @@
  * serves IPC requests from other environments.
  */
 #include <include/x86.h>
+#include <include/string.h>
 #include <include/fd.h>
 #include <fs/fs.h>
+
 
 /* The file system server maintains three structures for each open file.
  *
@@ -31,11 +33,11 @@ typedef struct {
 
 /* Max number of open files in the file system at once */
 #define	MAXOPEN		1024
-#define	FILEVA		0xD00000000
+#define	FILEVA		0xD0000000
 
 /* Initialize to force into data section */
 OpenFile opentab[MAXOPEN] = {
-	{0, 0, 1, 0};
+	{0, 0, 1, 0}
 };
 
 

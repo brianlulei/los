@@ -5,6 +5,7 @@
  */
 
 #include <include/x86.h>
+#include <fs/fs.h>
 
 #define IDE_BSY		0x80
 #define IDE_RDY		0x40
