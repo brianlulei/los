@@ -59,5 +59,50 @@ ide_set_disk(int d)
 	diskno = d;
 }
 
+int
+ide_read(uint32_t secno, void *dst, size_t nsecs)
+{
+	int r;
 
+	assert(nsecs <= 256);
 
+	ide_wait_ready(0);
+
+	outb(0x1F2, nsecs);
+	outb(0x1F3, secno & 0xFF);
+	outb(0x1F4, (secno >> 8) & 0xFF);
+	outb(0x1F5, (secno >> 16) & 0xFF);
+	outb(0x1F6, 0xE0 | ((diskno & 1) << 4) | ((secno >> 24) & 0x0F));
+	outb(0x1F7, 0x20);
+
+	for (; nsecs > 0; nsecs--, dst += SECTSIZE) {
+		if (( r = ide_wait_ready(1)) < 0)
+			return r;
+		insl(0x1F0, dst, SECTSIZE / 4);
+	}
+	return 0;
+}
+
+int
+ide_write(uint32_t secno, const void *src, size_t nsecs)
+{
+	int r;
+
+    assert(nsecs <= 256);
+
+    ide_wait_ready(0);
+
+    outb(0x1F2, nsecs);
+    outb(0x1F3, secno & 0xFF);
+    outb(0x1F4, (secno >> 8) & 0xFF);
+    outb(0x1F5, (secno >> 16) & 0xFF);
+    outb(0x1F6, 0xE0 | ((diskno&1)<<4) | ((secno>>24)&0x0F));
+    outb(0x1F7, 0x30);  // CMD 0x30 means write sector
+
+    for (; nsecs > 0; nsecs--, src += SECTSIZE) {
+        if ((r = ide_wait_ready(1)) < 0)
+            return r;
+        outsl(0x1F0, src, SECTSIZE/4);
+    }
+    return 0;
+}
