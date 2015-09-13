@@ -22,7 +22,12 @@ int		ide_read(uint32_t secno, void *dst, size_t nsecs);
 int		ide_write(uint32_t secno, const void *src, size_t nsecs);
 
 /* bc.c */
+void *	diskaddr(uint32_t blockno);
+bool	va_is_mapped(void *va);
+bool	va_is_dirty(void *va);
+void	flush_block(void *addr);
 void	bc_init(void);
+
 
 /* fs.c */
 void	fs_init(void);

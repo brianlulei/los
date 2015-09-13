@@ -20,6 +20,19 @@ strnlen(const char *s, size_t size)
 	return n;
 }
 
+char *
+strcpy(char *dst, const char *src)
+{
+	char *ret;
+
+	ret = dst;
+	while ((*dst++ = *src++) != '\0')
+		/* do nothing */;
+
+	return ret;
+}
+
+
 void *
 memset(void *dst, int c, size_t n)
 {

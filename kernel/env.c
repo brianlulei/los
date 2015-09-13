@@ -400,7 +400,13 @@ env_create(uint8_t *binary, enum EnvType type)
 		panic("Error in env_create(): ");
 
 	load_icode(env, binary);
-	env->env_type = type;	
+	env->env_type = type;
+
+	// If this is the file server (type == ENV_TYPE_FS) give it I/O privileges.
+	if (type == ENV_TYPE_FS)
+        env->env_tf.tf_eflags |= FL_IOPL_3;	// access to any IO port is granted
+    else
+        env->env_tf.tf_eflags |= FL_IOPL_0;	
 }
 
 /********************************************************************

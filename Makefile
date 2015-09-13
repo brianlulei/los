@@ -68,6 +68,8 @@ IMAGES	:= $(OBJDIR)/kernel/kernel.img
 GDBPORT := $(shell expr `id -u` % 5000 + 25000)
 QEMUOPTS = -hda $(OBJDIR)/kernel/kernel.img -serial mon:stdio -gdb tcp::$(GDBPORT)
 QEMUOPTS += -smp $(CPUS)
+QEMUOPTS += -hdb $(OBJDIR)/fs/fs.img
+IMAGES += $(OBJDIR)/fs/fs.img
 
 pre-qemu: .gdbinit
 

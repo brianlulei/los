@@ -5,6 +5,7 @@
 
 int		strlen(const char *s);
 int		strnlen(const char *s, size_t size);
+char *	strcpy(char *dst, const char *src);
 void *	memset(void *dst, int c, size_t len);
 void *	memmove(void *dst, const void *src, size_t len);
 int		memcmp(const void *v1, const void *v2, size_t n);
