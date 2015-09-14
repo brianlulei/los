@@ -33,3 +33,9 @@ void	bc_init(void);
 void	fs_init(void);
 
 bool	block_is_free(uint32_t blockno);
+
+bool	block_is_free(uint32_t blockno);
+int		alloc_block(void);
+
+/* test.c */
+void	fs_test(void);

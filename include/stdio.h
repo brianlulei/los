@@ -19,7 +19,7 @@ int		vsnprintf(char *str, int size, const char *fmt, va_list);
 
 /* lib/printfmt.c */
 void	vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list);		
-
+void    printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...);
 
 /* lib/readline.c */
 char *	readline(const char *prompt);

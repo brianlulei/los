@@ -4,6 +4,25 @@
 #include <include/string.h>
 #include <include/error.h>
 
+static const char * const error_string[MAXERROR] =
+{
+    [E_UNSPECIFIED] = "unspecified error",
+    [E_BAD_ENV] = "bad environment",
+    [E_INVAL]   = "invalid parameter",
+    [E_NO_MEM]  = "out of memory",
+    [E_NO_FREE_ENV] = "out of environments",
+    [E_FAULT]   = "segmentation fault",
+    [E_IPC_NOT_RECV]= "env is not recving",
+    [E_EOF]     = "unexpected end of file",
+    [E_NO_DISK] = "no free space on disk",
+    [E_MAX_OPEN]    = "too many files are open",
+    [E_NOT_FOUND]   = "file or block not found",
+    [E_BAD_PATH]    = "invalid path",
+    [E_FILE_EXISTS] = "file already exists",
+    [E_NOT_EXEC]    = "file is not a valid executable",
+    [E_NOT_SUPP]    = "operation not supported",
+};
+
 static void
 printnum (void (*putch)(int, void*), void * putdat, unsigned long long num,
 		  unsigned base, int width, int padc)
@@ -119,6 +138,17 @@ vprintfmt(void (*putch)(int, void *), void *putdat, const char *fmt, va_list ap)
 			putch(va_arg(ap, int), putdat);
 			break;
 
+		// error message
+        case 'e':
+            err = va_arg(ap, int);
+            if (err < 0)
+                err = -err;
+            if (err >= MAXERROR || (p = error_string[err]) == NULL)
+                printfmt(putch, putdat, "error %d", err);
+            else
+                printfmt(putch, putdat, "%s", p);
+            break;
+
 		// string
 		case 's':
 			if ((p = va_arg(ap, char *)) == NULL)
@@ -189,6 +219,15 @@ vprintfmt(void (*putch)(int, void *), void *putdat, const char *fmt, va_list ap)
 	}
 }
 
+void
+printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...)
+{
+    va_list ap; 
+
+    va_start(ap, fmt);
+    vprintfmt(putch, putdat, fmt, ap);
+    va_end(ap);
+}
 
 struct sprintbuf {
     char *buf;

@@ -1,0 +1,33 @@
+#include <include/x86.h>
+#include <include/string.h>
+
+#include <fs/fs.h>
+
+static char *msg = "This is the NEW message of the day!\n\n";
+
+void
+fs_test(void)
+{
+	File *f;
+	int r;
+	char *blk;
+	uint32_t *bits;
+
+	// back up bitmap
+	if ((r = sys_page_alloc(0, (void *) PGSIZE, PTE_P | PTE_U | PTE_W)) < 0)
+		panic("sys_page_alloc: %e", r);
+
+	bits = (uint32_t *) PGSIZE;
+	memmove(bits, bitmap, PGSIZE);
+
+	// allocate block
+	if ((r = alloc_block()) < 0)
+		panic("alloc_block: %e", r);
+
+	// check that block was free
+	assert(bits[r/32] & (1 << (r%32)));
+
+	// and is not free any more
+	assert(!(bitmap[r/32] & (1 << (r%32))));
+	cprintf("alloc_block is good\n");
+}

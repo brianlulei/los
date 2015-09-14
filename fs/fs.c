@@ -36,6 +36,53 @@ block_is_free(uint32_t blockno)
 	return 0;
 }
 
+/* Mark a block free in the bitmap */
+void
+free_block(uint32_t blockno)
+{
+	// Blockno zero is the null pointer of block numbers.
+	if (blockno == 0)
+		panic("attempt to free zero block");
+	bitmap[blockno/32] |= 1 << (blockno % 32);
+}
+
+/* Mark a block allocated in the bitmap */
+static void
+unfree_block(uint32_t blockno)
+{
+	// Blockno zero is the null pointer of block numbers.
+	if (blockno == 0)
+		panic("unfree_block: attempt to free zero block");
+	bitmap[blockno/32] &= ~(1 << (blockno % 32));
+}
+
+/* Search the bitmap for a free block and allocate it. When you
+ * allocate a block, immediately flush the changed bitmap block to disk.
+ *
+ * Return block number allocated on success,
+ * -E_NO_DISK if we are out of blocks.
+ *
+ * Hint: use free block as an example for manipulating the bitmap.
+ */
+int alloc_block(void)
+{
+	// Th bitmap consists of one or more blocks. A single bitmap block
+	// contains the in-use bits for BLKBITSIZE blocks. There are
+	// super->s_nblocks blocks in the disk altogether.
+	uint32_t blockno, blockbitno;
+
+	for (blockno = 0; blockno < super->s_nblocks; blockno++) {
+		if (block_is_free(blockno)) {
+			unfree_block(blockno);
+			blockbitno = blockno / BLKBITSIZE;
+			flush_block(diskaddr(2 + blockbitno));
+			return blockno;	
+		}
+	}
+	return -E_NO_DISK;
+}
+
+
 /* Validate the file system bitmap. 
  *
  * Check that al reserved blocks -- 0, 1, and the bitmap blocks themselves --
