@@ -170,7 +170,7 @@ file_block_walk(File *f, uint32_t filebno, uint32_t **ppdiskbno, bool alloc)
 			if (!alloc)
 				return -E_NOT_FOUND;
 
-			// allocate indirect block.
+			// allocate indirect block (* not file data block *)
 			f->f_indirect = alloc_block();
 			if (!f->f_indirect)
 				return -E_NO_DISK;
@@ -205,7 +205,9 @@ int file_get_block(File *f, uint32_t filebno, char **blk)
     if ((r = file_block_walk(f, filebno, &pdiskbno, 1)) < 0)
         return r;
 
-    // Not exist yet.
+    // Although file_block_walk would allocate indirect block
+	// but file data block is not allocated, here allocate
+	// the data block.
     if (!*pdiskbno)
         *pdiskbno = alloc_block();
 
