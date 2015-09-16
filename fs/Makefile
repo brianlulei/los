@@ -7,9 +7,11 @@ FSOFILES := $(OBJDIR)/fs/serv.o \
 			$(OBJDIR)/fs/test.o \
 			
 
-USERAPPS :=	$(OBJDIR)/user/init
+USERAPPS :=
 
 FSIMGTXTFILES :=	fs/newmotd
+
+FSIMGFILES := $(FSIMGTXTFILES) $(USERAPPS)
 
 $(OBJDIR)/fs/%.o: fs/%.c
 	@echo + cc[USER] $<
@@ -33,7 +35,7 @@ $(OBJDIR)/fs/fsformat: fs/fsformat.c
 $(OBJDIR)/fs/clean-fs.img: $(OBJDIR)/fs/fsformat $(FSINGFILES)
 	@echo + mk $(OBJDIR)/fs/clean-fs.img
 	@mkdir -p $(@D)
-	$(OBJDIR)/fs/fsformat $(OBJDIR)/fs/clean-fs.img 1024 $(FSINGFILES)
+	$(OBJDIR)/fs/fsformat $(OBJDIR)/fs/clean-fs.img 1024 $(FSIMGFILES)
 
 $(OBJDIR)/fs/fs.img: $(OBJDIR)/fs/clean-fs.img
 	@echo + cp $(OBJDIR)/fs/clean-fs.img $@

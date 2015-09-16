@@ -31,8 +31,7 @@ void	bc_init(void);
 
 /* fs.c */
 void	fs_init(void);
-
-bool	block_is_free(uint32_t blockno);
+int		file_open(const char *path, File **f);
 
 bool	block_is_free(uint32_t blockno);
 int		alloc_block(void);
