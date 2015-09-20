@@ -55,6 +55,11 @@ serve_init(void)
 }
 
 void
+serve(void)
+{
+}
+
+void
 umain(int argc, char ** argv)
 {
 	static_assert(sizeof(File) == 256);
@@ -68,4 +73,5 @@ umain(int argc, char ** argv)
 	serve_init();
 	fs_init();
 	fs_test();
+	serve();
 }

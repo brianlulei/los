@@ -321,3 +321,82 @@ file_open(const char *path, File **pf)
 {
 	return walk_path(path, 0, pf, 0);
 }
+
+/* Remove a block from file f. If it's not there, just silently succeed.
+ * Returns 0 on success, < 0 on error.
+ */
+static int
+file_free_block(File *f, uint32_t filebno)
+{
+	int r;
+	uint32_t *ptr;
+
+	if ((r = file_block_walk(f, filebno, &ptr, 0)) < 0)
+		return r;
+	if (*ptr) {
+		free_block(*ptr);
+		*ptr = 0;
+	}
+	return 0;
+}
+
+/* Remove any blocks currently used by file 'f', but not necessary
+ * for a file of size 'newsize'. For both the old and new sizes,
+ * figure out the number of blocks required, and then clear the blocks
+ * from new_nblocks to old_nblocks. If the new_nblocks is no more than
+ * NDIRECT, and the indirect block has been allocated (f->f_indirect != 0),
+ * then free the indirect block too. (Remember to clear the f->f_indirect
+ * pointer so you'll know whether it's valid!) Do not change f->f_size;
+ */
+static void
+file_truncate_blocks(File *f, off_t newsize)
+{
+	int r;
+	uint32_t bno, old_nblocks, new_nblocks;
+
+	old_nblocks = (f->f_size + BLKSIZE - 1) / BLKSIZE;
+	new_nblocks = (newsize + BLKSIZE - 1) / BLKSIZE;
+
+	for (bno = new_nblocks; bno < old_nblocks; bno++)
+		if ((r = file_free_block(f, bno)) < 0)
+			cprintf("warning: file_free_block: %e", r);
+
+	if (new_nblocks <= NDIRECT && f->f_indirect) {
+		free_block(f->f_indirect);
+		f->f_indirect = 0;
+	}
+}
+
+
+/* Set the size of file f, truncating or extending as necessary. */
+int
+file_set_size(File *f, off_t newsize)
+{
+	if (f->f_size > newsize)
+		file_truncate_blocks(f, newsize);
+	f->f_size = newsize;
+	flush_block(f);
+	return 0;
+}
+
+/* Flush the contents and metadata of file f out to disk.
+ * Loop over all blocks in file.
+ * Translate the file block number into a disk block number
+ * and then check whether that disk block is dirty. If so, write it out.
+ */
+void
+file_flush(File *f)
+{
+	int i;
+	uint32_t *pdiskbno;
+
+	for (i = 0; i < (f->f_size + BLKSIZE - 1) / BLKSIZE; i++) {
+		if (file_block_walk(f, i, &pdiskbno, 0) < 0 ||
+			pdiskbno == NULL || *pdiskbno == 0)
+			continue;
+		flush_block(diskaddr(*pdiskbno));
+	}
+	flush_block(f);
+	if (f->f_indirect)
+		flush_block(diskaddr(f->f_indirect));
+}

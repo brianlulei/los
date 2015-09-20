@@ -33,6 +33,8 @@ void	bc_init(void);
 void	fs_init(void);
 int		file_get_block(File *f, uint32_t file_blockno, char **pblk);
 int		file_open(const char *path, File **f);
+void	file_flush(File *f);
+int		file_set_size(File *f, off_t newsize);
 
 bool	block_is_free(uint32_t blockno);
 int		alloc_block(void);
