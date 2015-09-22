@@ -2,6 +2,7 @@
 #define INCLUDE_FS_H
 
 #include <include/types.h>
+#include <include/mmu.h>
 
 /* File nodes (both in-memory and on-disk) */
 
@@ -13,6 +14,9 @@
  * Must be a multiple of 4
  */
 #define MAXNAMELEN	128
+
+/* Maximum size of a complete path name, including null */
+#define MAXPATHLEN  1024
 
 /* Number of direct block pointers in a File descriptor */
 #define	NDIRECT		10
@@ -52,5 +56,67 @@ typedef struct {
 	uint32_t	s_nblocks;			// Total number of blocks on disk
 	File		s_root;				// Root directory node
 } Super;
+
+/* Definitions for requests from clients to file system */
+enum {
+	FSREQ_OPEN = 1,
+	FSREQ_SET_SIZE,
+	// Read returns a Fsret_read on the request page
+	FSREQ_READ,
+	FSREQ_WRITE,
+	// Stat returns a Fsret_stat on the request page
+	FSREQ_STAT,
+	FSREQ_FLUSH,
+	FSREQ_REMOVE,
+	FSREQ_SYNC
+};
+
+union Fsipc {
+	struct Fsreq_open {
+		char	req_path[MAXPATHLEN];
+		int		req_omode;
+	} open;
+
+	struct Fsreq_set_size {
+		int		req_fileid;
+		off_t	req_size;
+	} set_size;
+
+	struct Fsreq_read {
+		int		req_fileid;
+		size_t	req_n;
+	} read;
+
+	struct Fsret_read {
+		char	ret_buf[PGSIZE];
+	} readRet;
+
+	struct Fsreq_write {
+		int		req_fileid;
+		size_t	req_n;
+		char	req_buf[PGSIZE - (sizeof(int) + sizeof(size_t))];
+	} write;
+
+	struct Fsreq_stat {
+		int		req_fileid;
+	} stat;
+
+	struct Fsret_stat {
+		char	ret_name[MAXNAMELEN];
+		off_t	ret_size;
+		int		ret_isdir;
+	} statRet;
+
+	struct Fsreq_flush {
+		int		req_fileid;
+	} flush;
+
+	struct Fsreq_remove {
+		char	req_path[MAXPATHLEN];
+	} remove;
+
+	// Ensure Fsipc is one page
+	char	_pad[PGSIZE];
+};
 
 #endif
