@@ -41,6 +41,21 @@ typedef int32_t				ssize_t;
 // off_t is used for file offsets and lengths.
 typedef int32_t				off_t;
 
+// Efficient min and max operations
+#define MIN(_a, _b)						\
+({										\
+	typeof(_a) __a = (_a);				\
+	typeof(_b) __b = (_b);				\
+	__a <= __b ? __a : __b;				\
+})
+
+#define MAX(_a, _b)                     \
+({										\
+    typeof(_a) __a = (_a);				\
+	typeof(_b) __b = (_b);				\
+	__a >= __b ? __a : __b;             \
+})
+
 // Round up to the nearest multiple of n
 // typeof declares y with the type of what x points to.
 #define ROUNDDOWN(a, n)					\

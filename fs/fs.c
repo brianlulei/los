@@ -253,6 +253,38 @@ dir_lookup(File *dir, const char *name, File **file)
 	return -E_NOT_FOUND;
 }
 
+/* Set *file to point at a free File structure in dir. The caller is
+ * responsible for filling in the File fields
+ */
+static int
+dir_alloc_file(File *dir, File **file)
+{
+	int r;
+	uint32_t nblock, i, j;
+	char *blk;
+	File *f;
+
+	assert((dir->f_size % BLKSIZE) == 0);
+	nblock = dir->f_size / BLKSIZE;
+	for (i = 0; i < nblock; i++) {
+		if ((r = file_get_block(dir, i, &blk)) < 0)
+			return r;
+
+		f = (File *) blk;
+		for (j = 0; j < BLKFILES; j++)
+			if (f[j].f_name[0] == '\0') {
+				*file = &f[j];
+				return 0;
+			}
+	}
+	dir->f_size += BLKSIZE;
+	if ((r = file_get_block(dir, i, &blk)) < 0)
+		return r;
+	f = (File *) blk;
+	*file = &f[0];
+	return 0;
+}
+
 /* Evalate a path name, starting at the root.
  * On success, set *pf to the file we found and set *pdir to the directory
  * the file is in. If we cannot find the file but find the directory it
@@ -313,6 +345,30 @@ walk_path(const char *path, File **pdir, File **pf, char *lastelem)
 // File operations
 // --------------------------------------------------------------
 
+/* Create "path". On success set *pf to point at the file and return 0.
+ * On error return < 0.
+ */
+int
+file_create(const char *path, File **pf)
+{
+	char name[MAXNAMELEN];
+	int r;
+	File *dir, *f;
+
+	if ((r = walk_path(path, &dir, &f, name)) == 0)
+		return -E_FILE_EXISTS;
+	if (r != -E_NOT_FOUND || dir == 0)
+		return r;
+	if ((r = dir_alloc_file(dir, &f)) < 0)
+		return r;
+
+	strcpy(f->f_name, name);
+	*pf = f;
+	file_flush(dir);
+	return 0;
+}
+
+
 /* Open "path". On success set *pf to point at the file and return 0.
  * On error return < 0.
  */
@@ -320,6 +376,34 @@ int
 file_open(const char *path, File **pf)
 {
 	return walk_path(path, 0, pf, 0);
+}
+
+/* Read count bytes from f into buf, starting from seek position offset.
+ * This meant to mimic the standard pread function.
+ * Returns the number of bytes read, < 0 on error.
+ */
+ssize_t
+file_read(File *f, void *buf, size_t count, off_t offset)
+{
+	int r, bn;
+	off_t pos;
+	char *blk;
+
+	if (offset >= f->f_size)
+		return 0;
+
+	count = MIN(count, f->f_size - offset);
+
+	for (pos = offset; pos < offset + count; ) {
+		if ((r = file_get_block(f, pos / BLKSIZE, &blk)) < 0 )
+			return r;
+
+		bn = MIN(BLKSIZE - pos % BLKSIZE, offset + count - pos);
+		memmove(buf, blk + pos % BLKSIZE, bn);
+		pos += bn;
+		buf += bn;
+	}
+	return count;
 }
 
 /* Remove a block from file f. If it's not there, just silently succeed.
@@ -366,7 +450,6 @@ file_truncate_blocks(File *f, off_t newsize)
 		f->f_indirect = 0;
 	}
 }
-
 
 /* Set the size of file f, truncating or extending as necessary. */
 int

@@ -31,6 +31,7 @@ void	bc_init(void);
 
 /* fs.c */
 void	fs_init(void);
+int		file_create(const char *path, File **f);
 int		file_get_block(File *f, uint32_t file_blockno, char **pblk);
 int		file_open(const char *path, File **f);
 void	file_flush(File *f);

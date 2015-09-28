@@ -57,6 +57,43 @@ serve_init(void)
 	}
 }
 
+/* Allocate an open file */
+int
+openfile_alloc(OpenFile **o)
+{
+	int i, r;
+
+	// Find an available open-file table entry
+	for (i = 0; i < MAXOPEN; i++) {
+		switch (pageref(opentab[i].o_fd)) {
+		case 0:
+			if ((r = sys_page_alloc(0, opentab[i].o_fd, PTE_P | PTE_U | PTE_W)) < 0)
+				return r;
+			/* fall through */
+		case 1:
+			opentab[i].o_fileid += MAXOPEN;
+			*o = &opentab[i];
+			memset(opentab[i].o_fd, 0, PGSIZE);
+			return (*o)->o_fileid;
+		}
+	}
+	return -E_MAX_OPEN;
+}
+
+/* Look up an open file for envid */
+int
+openfile_lookup(envid_t envid, uint32_t fileid, OpenFile **po)
+{
+	OpenFile *o;
+
+	o = &opentab[fileid % MAXOPEN];
+	if (pageref(o->o_fd) <= 1 || o->o_fileid != fileid)
+		return -E_INVAL;
+
+	*po = o;
+	return 0;
+}
+
 /* Open req->req_path in mode req->req_omode, storing the Fd page and
  * permissions to return to the calling environment in *pg_store and
  * *perm_store respectively.
@@ -65,6 +102,78 @@ int
 serve_open(envid_t envid, struct Fsreq_open *req,
        void **pg_store, int *perm_store)
 {
+	char path[MAXPATHLEN];
+	File *f;
+	int fileid;
+	int r;
+	OpenFile *o;
+
+	if (debug)
+		cprintf("serve_open %08x %s 0x%x\n", envid, req->req_path, req->req_omode);
+
+	// Copy in the path, making sure it's null-terminated
+	memmove(path, req->req_path, MAXPATHLEN);
+	path[MAXPATHLEN - 1] = 0;
+
+	// Find an open file ID
+	if ((r = openfile_alloc(&o)) < 0) {
+		if (debug)
+			cprintf("openfile_alloc failed: %e", r);
+		return r;
+	}
+	fileid = r;
+
+	// Open the file
+	if (req->req_omode & O_CREAT) {
+		if ((r = file_create(path, &f)) < 0) {
+			if (!(req->req_omode & O_EXCL) && r == -E_FILE_EXISTS)
+				goto try_open;
+			if (debug)
+				cprintf("file_create failed: %e", r);
+			return r;
+		}
+	} else {
+try_open:
+		if ((r = file_open(path, &f)) < 0) {
+			if (debug)
+				cprintf("file_open failed: %e", r);
+			return r;
+		}
+	}
+
+	// Truncate
+	if (req->req_omode & O_TRUNC) {
+		if ((r = file_set_size(f, 0)) < 0) {
+			if (debug)
+				cprintf("file_set_size failed: %e", r);
+			return r;
+		}
+	}
+
+	if ((r = file_open(path, &f)) < 0) {
+		if (debug)
+			cprintf("file_open failed: %e", r);
+		return r;
+	}
+
+	// Save the file pointer
+	o->o_file = f;
+
+	// Fill out the Fd structure
+	o->o_fd->fd_file.id = o->o_fileid;
+	o->o_fd->fd_omode = req->req_omode & O_ACCMODE;
+	// devfile is not defined.
+	// o->o_fd->fd_dev_id = devfile.dev_id;
+	o->o_mode = req->req_omode;
+
+	if (debug)
+		cprintf("sending success, page %08x\n", (uintptr_t) o->o_fd);
+	
+	// Share the FD page with the caller by setting *pg_store,
+	// store its permission in *perm_store
+	*pg_store = o->o_fd;
+	*perm_store = PTE_P | PTE_U | PTE_W | PTE_SHARE;
+
 	return 0;
 }
 
@@ -74,7 +183,23 @@ serve_open(envid_t envid, struct Fsreq_open *req,
 int
 serve_set_size(envid_t envid, struct Fsreq_set_size *req)
 {
-	return 0;
+	OpenFile *o;
+	int r;
+
+	if (debug)
+		cprintf("serve_set_size %08x %08x %08x\n", envid, req->req_fileid, req->req_size);
+
+	// Every file system IPC call has the same general structure.
+	// Here is how it goes.
+
+	// First, use openfile_lookup to find the relevant open file.
+	// On failur, return the error code to the client with ipc_send.
+	if ((r = openfile_lookup(envid, req->req_fileid, &o)) < 0)
+		return r;
+
+	// Second, call the relevant file system function (from fs/fs.c).
+	// On failure, return the error code to the client.
+	return file_set_size(o->o_file, req->req_size);
 }
 
 /* Read at most ipc->read.req_n bytes from the current seek position
@@ -85,6 +210,7 @@ serve_set_size(envid_t envid, struct Fsreq_set_size *req)
 int
 serve_read(envid_t envid, union Fsipc *ipc)
 {
+	
 	return 0;
 }
 
