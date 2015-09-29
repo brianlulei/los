@@ -210,8 +210,32 @@ serve_set_size(envid_t envid, struct Fsreq_set_size *req)
 int
 serve_read(envid_t envid, union Fsipc *ipc)
 {
-	
-	return 0;
+	struct Fsreq_read *req = &ipc->read;
+	struct Fsret_read *ret = &ipc->readRet;
+	OpenFile *o;
+	int r;
+
+	if (debug)
+		cprintf("serve_read %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
+
+	if ((r = openfile_lookup(envid, req->req_fileid, &o)) < 0)
+		return r;
+
+	File *f = o->o_file;
+	Fd *fd = o->o_fd;
+
+	// Size to read.
+    size_t sz = req->req_n < PGSIZE ? req->req_n : PGSIZE;
+
+	// Size readed.
+    ssize_t rdsz = file_read(f, ret->ret_buf, sz, fd->fd_offset);
+    if (rdsz < 0)
+        return rdsz;
+
+    // Update seek position.
+    fd->fd_offset += rdsz;
+    
+    return rdsz;
 }
 
 /* Write req->req_n bytes from req->req_buf to req_fileid, starting at
@@ -222,7 +246,34 @@ serve_read(envid_t envid, union Fsipc *ipc)
 int
 serve_write(envid_t envid, struct Fsreq_write *req)
 {
-	return 0;
+	if (debug)
+		cprintf("serve_write %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
+
+	OpenFile *o;
+	int r;
+
+	if ((r = openfile_lookup(envid, req->req_fileid, &o)) < 0)
+		return r;
+
+	File *f = o->o_file;
+    Fd *fd = o->o_fd;
+
+    // Size to write.
+    size_t sz = req->req_n < PGSIZE ? req->req_n : PGSIZE;
+
+    // Maybe the file needs extention.
+    if (fd->fd_offset + sz > f->f_size)
+		f->f_size = fd->fd_offset + sz;
+
+    // Size written.
+    ssize_t wrsz = file_write(f, req->req_buf, sz, fd->fd_offset);
+    if (wrsz < 0)
+        return wrsz;
+
+    // Update current seek position.
+    fd->fd_offset += wrsz;
+    
+    return wrsz;
 }
 
 /* Stat ipc->stat.req_fileid.  Return the file's struct Stat to the
@@ -231,6 +282,20 @@ serve_write(envid_t envid, struct Fsreq_write *req)
 int
 serve_stat(envid_t envid, union Fsipc *ipc)
 {
+	struct Fsreq_stat *req = &ipc->stat;
+	struct Fsret_stat *ret = &ipc->statRet;
+	OpenFile *o;
+	int r;
+
+	if (debug)
+		cprintf("serve_stat %08x %08x\n", envid, req->req_fileid);
+
+	if ((r = openfile_lookup(envid, req->req_fileid, &o)) < 0)
+		return r;
+
+	strcpy(ret->ret_name, o->o_file->f_name);
+	ret->ret_size = o->o_file->f_size;
+	ret->ret_isdir = (o->o_file->f_type == FTYPE_DIR);
 	return 0;
 }
 
@@ -238,12 +303,23 @@ serve_stat(envid_t envid, union Fsipc *ipc)
 int
 serve_flush(envid_t envid, struct Fsreq_flush *req)
 {
+	OpenFile *o;
+	int r;
+
+	if (debug)
+		cprintf("serve_flush %08x %08x\n", envid, req->req_fileid);
+
+	if ((r = openfile_lookup(envid, req->req_fileid, &o)) < 0)
+		return r;
+
+	file_flush(o->o_file);
 	return 0;
 }
 
 int
 serve_sync(envid_t envid, union Fsipc *req)
 {
+	fs_sync();
 	return 0;
 }
 

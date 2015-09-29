@@ -22,7 +22,9 @@ typedef unsigned long long	uint64_t;
 
 // size_t is used for memory object sizes.
 typedef	uint32_t			size_t;
-
+// ssize_t is a signed version of ssize_t, used in case there might be an
+// error return.
+typedef int32_t				ssize_t;
 
 // Pointers and addresses are 32 bits long
 // Uintptr_t is to represent the numerical values of virtual addresses.

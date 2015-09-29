@@ -34,8 +34,11 @@ void	fs_init(void);
 int		file_create(const char *path, File **f);
 int		file_get_block(File *f, uint32_t file_blockno, char **pblk);
 int		file_open(const char *path, File **f);
+ssize_t	file_read(File *f, void *buf, size_t count, off_t offset);
+int		file_write(File *f, const void *buf, size_t count, off_t offset);
 void	file_flush(File *f);
 int		file_set_size(File *f, off_t newsize);
+void	fs_sync(void);
 
 bool	block_is_free(uint32_t blockno);
 int		alloc_block(void);
